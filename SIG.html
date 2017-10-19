@@ -15,20 +15,18 @@
       width: 100%;
     }
 
-    #stopListWidget {
-      z-index: 200;
+    #btnOpen{
+      z-index: 300;
       position: absolute;
-      right: 10px;
-      top: 10px;
-      max-height: 100px;
-      width: 100px;
-      overflow-y: auto;
-      padding: 5px;
-    }
+      top: 50%;
+      left: 10px;
+      display: none;
+    }    
   </style>
 
   <link rel="stylesheet" href="https://js.arcgis.com/4.5/esri/css/main.css">
   <link rel="stylesheet" href="css/bootstrap4.min.css">
+  <link rel="stylesheet" href="css/aplicacion.css">
   <script src="https://js.arcgis.com/4.5/"></script>
   <script src="js/jquery.min.js"></script>
   <script src="js/bootstrap.min.js"></script> 
@@ -37,16 +35,67 @@
 </head>
 
 <body>
-  <div id="stopListWidget" class="card">
+  <div class="wrapper">
+    <!-- Sidebar Holder -->
+    <nav id="sidebar">
+        <span class="sidebarCollapse float-right" style="cursor: pointer">&#10006; &nbsp;</span>
+        <div class="sidebar-header">
+            <h3>Sistemas de Información Geográfica</h3>
+            <small>Tarea 2</small><br>
+            <small>Federico Fioritto - Giuliano Severi</small>
+        </div>
+
+        <ul id="stopList" class="list-unstyled components">
+            <p>Paradas</p>
+
+        </ul>
+
+        <!-- <ul id="stopList" class="list-unstyled components">
+            <p>Opciones</p>
+
+        </ul> -->
+
+        <ul class="list-unstyled CTAs">
+            <li><a href="#" class="btn btn-success">PLAY</a></li>
+            <li><a href="#" class="btn btn-danger">Descargar</a></li>
+        </ul>
+    </nav>
+
+    <span id="btnOpen" class="btn btn-danger sidebarCollapse"><b>></b></span>
+
+    <!-- Page Content Holder -->
+    <div id="content">
+
+        <!-- <nav class="navbar navbar-default">
+            <div class="container-fluid">
+
+                <div class="navbar-header">
+                    <button type="button" id="sidebarCollapse" class="btn btn-info navbar-btn">
+                        <i class="glyphicon glyphicon-align-left"></i>
+                        <span>Toggle Sidebar</span>
+                    </button>
+                </div>
+
+                <div class="collapse navbar-collapse" id="bs-example-navbar-collapse-1">
+                    <ul class="nav navbar-nav navbar-right">
+                        <li><a href="#">Page</a></li>
+                        <li><a href="#">Page</a></li>
+                        <li><a href="#">Page</a></li>
+                        <li><a href="#">Page</a></li>
+                    </ul>
+                </div>
+            </div>
+        </nav> -->
+        <div id="viewDiv"></div>
+    </div>
+</div>
+  <!-- <div id="stopListWidget" class="card">
     <div class="card-block">
       Lista de paradas:
       <ul id="stopList" class="list-group"></ul>
       <button id="btnSaveStops" type="button" class="btn btn-outline-success">Guardar!</button>
     </div>
-  </div>
-  <div id="viewDiv">
-    
-  </div>
+  </div> -->
 </body>
 
 </html>

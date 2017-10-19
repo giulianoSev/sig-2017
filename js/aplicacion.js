@@ -217,12 +217,22 @@ require([
         $("#btnSaveStops").click(() => {
             saveStops();
         });
+        $('.sidebarCollapse').on('click', function () {
+            if($("#sidebar").hasClass("active")){
+                $("#content").css("width", "85%");
+            }else{
+                $("#content").css("width", "100%");
+            }
+            $('#sidebar').toggleClass('active');
+            $("#btnOpen").toggle(200);
+            return false;
+        });
     }
 
 
     // Agrega parada a lista de paradas
     function addStopHtml(stop){
-        $("#stopList").append(`<li id="stopListItem${stop.id}" class="list-group-item">${stop.name}</li>`);
+        $("#stopList").append(`<li id="stopListItem${stop.id}""><a href="#">${stop.name} <span class="float-right">&#10006;</span></a></li>`);
         $("#stopListItem" + stop.id).click(() => {
             removeStop(stop.id);    
         });
@@ -230,7 +240,7 @@ require([
 
     // Actualiza la lista de paradas
     function updateStopsList(){
-        $("#stopList").html("");
+        $("#stopList").html("<p>Paradas</p>");
         stops.forEach(stop => {
             addStopHtml(stop);
         });
