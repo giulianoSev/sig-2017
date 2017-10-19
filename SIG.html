@@ -14,6 +14,17 @@
       height: 100%;
       width: 100%;
     }
+
+    #stopListWidget {
+      z-index: 200;
+      position: absolute;
+      right: 10px;
+      top: 10px;
+      max-height: 100px;
+      width: 100px;
+      overflow-y: auto;
+      padding: 5px;
+    }
   </style>
 
   <link rel="stylesheet" href="https://js.arcgis.com/4.5/esri/css/main.css">
@@ -26,13 +37,16 @@
 </head>
 
 <body>
-  <div class="border border-success rounded">
-    Lista de paradas:
-    <ul id="stopList">
-
-    </ul>
+  <div id="stopListWidget" class="card">
+    <div class="card-block">
+      Lista de paradas:
+      <ul id="stopList" class="list-group"></ul>
+      <button id="btnSaveStops" type="button" class="btn btn-outline-success">Guardar!</button>
+    </div>
   </div>
-  <div id="viewDiv"></div>
+  <div id="viewDiv">
+    
+  </div>
 </body>
 
 </html>

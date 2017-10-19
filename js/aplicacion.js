@@ -11,10 +11,11 @@ require([
     "dojo/on",
     "esri/widgets/Search",
     "esri/tasks/Locator",
+    "esri/layers/FeatureLayer",
     "dojo/domReady!"
 ], function(
     Map, TileLayer, MapView, Graphic, GraphicsLayer, RouteTask, RouteParameters,
-    FeatureSet, urlUtils, on, Search, Locator
+    FeatureSet, urlUtils, on, Search, Locator, FeatureLayer
 ) {
     ///////////////////////////
     // DEFINICIONES Y CONSTANTES
@@ -62,9 +63,18 @@ require([
     // Se deja definida la capa de rutas
     var routeLyr = new GraphicsLayer();
     map.layers.add(routeLyr);
-    
+
+    // Se define la feature layer para guardar los puntos
+    var stopsFLyr = new FeatureLayer({
+        url: "http://sampleserver5.arcgisonline.com/arcgis/rest/services/LocalGovernment/Events/FeatureServer",
+        outFields: ["*"]
+        // mode: FeatureLayer.MODE_SNAPSHOT,
+    });
+    map.layers.add(stopsFLyr);
 
 
+    // Init Eventos Javascript
+    initDocument();
 
     ///////////////////////////
     // WIDGETS
@@ -94,7 +104,14 @@ require([
             name: result.result.name,
             geometry: result.result.feature.geometry,
             symbol: stopMarker,
-            graphic: new Graphic({geometry: result.result.feature.geometry, symbol: stopMarker})
+            graphic: new Graphic({
+                geometry: result.result.feature.geometry, 
+                symbol: stopMarker, 
+                attributes: {
+                    event_type: "17", 
+                    description: result.result.name
+                }
+            })
         };
         addStop(stop);
         solveRoute();
@@ -122,7 +139,6 @@ require([
 
     // Quita una parada y su punto en el mapa
     function removeStop(stopId){
-        debugger;
         var stop = _.find(stops, s => s.id == stopId);
         stops = _.without(stops, stop);
 
@@ -175,14 +191,38 @@ require([
         })
     }
 
+    function saveStops(){
+        var adds = [];
+        stops.forEach(stop => {
+            adds.push(stop.graphic);
+        });
+        stopsFLyr.applyEdits({
+            addFeatures: adds
+        })
+        .then(() => {
+            alert("Guardado!");
+        })
+        .catch(() => {
+            alert("Error!");
+        });
+    }
+
 
     ///////////////////////////
     // AUXILIARES HTML
     //////////////////////////
 
+    // Setea eventos jaavascript
+    function initDocument(){
+        $("#btnSaveStops").click(() => {
+            saveStops();
+        });
+    }
+
+
     // Agrega parada a lista de paradas
     function addStopHtml(stop){
-        $("#stopList").append(`<li id="stopListItem${stop.id}" onclick="removeStop(${stop.id})">${stop.name}</li>`);
+        $("#stopList").append(`<li id="stopListItem${stop.id}" class="list-group-item">${stop.name}</li>`);
         $("#stopListItem" + stop.id).click(() => {
             removeStop(stop.id);    
         });
