@@ -303,6 +303,10 @@ require([
         }
     }
 
+    function downloadPDF(){
+        alert("Falta hacer");
+    }
+
     ///////////////////////////
     // AUXILIARES HTML
     //////////////////////////
@@ -321,6 +325,12 @@ require([
             }else{
                 startSimulation();
             }
+        });
+        $("#btnLoadStops").click(() => {
+            loadStops();
+        });
+        $("#btnDownloadPDF").click(() => {
+            downloadPDF();
         });
         $('.sidebarCollapse').on('click', function () {
             if($("#sidebar").hasClass("active")){
@@ -368,30 +378,28 @@ require([
         });
 
         if(stops.length > 0){
-
-            // Ver esto. Capas que queda muy copiado a lo anterior
-            // $("#stopList").append(`
-            //    <li class="text-center">
-                    // <div class="btn-group btn-group-sm">
-                    //     <button type="button" class="btn btn-secondary">Left</button>
-                    //     <button type="button" class="btn btn-secondary">Middle</button>
-                    //     <button type="button" class="btn btn-secondary">Right</button>
-                    // </div>
-            //    </li>
-            // `);
-
             $("#stopList").append(`
-                <li class="text-center">
+                <li class="text-center" style="margin-top: 10px;">
+                    <button id="btnSaveStops" type="button" class="btn btn-success btn-sm" style="cursor: pointer;" title="Guardar paradas"><i class="fa fa-save"></i></button>
                     <button id="btnRemoveAllStops" type="button" class="btn btn-danger btn-sm" style="cursor: pointer;" title="Borrar todas"><i class="fa fa-trash"></i></button>
                 </li>
             `);
+            $("#btnSaveStops").click(() => {
+                saveStops();
+            });
             $("#btnRemoveAllStops").click(() => {
                 stops.forEach(stop => removeStop(stop.id));
             });
         }else{
             $("#stopList").append(`
                 <p><small>Ingrese paradas con la barra de búsqueda.</small></p>
+                <li class="text-center">
+                    <button id="btnLoadStops" type="button" class="btn btn-success btn-sm" style="cursor: pointer;" title="Cargar paradas">Cargar paradas <i class="fa fa-road"></i></button>
+                </li>
             `);
+            $("#btnLoadStops").click(() => {
+                loadStops();
+            });
         }
     }
 
