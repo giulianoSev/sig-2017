@@ -66,7 +66,7 @@ require([
 
     // Se define la feature layer para guardar los puntos
     var stopsFLyr = new FeatureLayer({
-        url: "http://sampleserver5.arcgisonline.com/arcgis/rest/services/LocalGovernment/Events/FeatureServer",
+        url: "http://sampleserver5.arcgisonline.com/arcgis/rest/services/LocalGovernment/Events/FeatureServer/0",
         outFields: ["*"]
         // mode: FeatureLayer.MODE_SNAPSHOT,
     });
@@ -107,6 +107,7 @@ require([
             graphic: new Graphic({
                 geometry: result.result.feature.geometry, 
                 symbol: stopMarker, 
+                // Atributos para el servidor de eventos
                 attributes: {
                     event_type: "17", 
                     description: result.result.name
@@ -244,6 +245,33 @@ require([
         stops.forEach(stop => {
             addStopHtml(stop);
         });
+
+        if(stops.length > 0){
+
+            // Ver esto. Capas que queda muy copiado a lo anterior
+            // $("#stopList").append(`
+            //    <li class="text-center">
+            //         <div class="btn-group btn-group-sm">
+            //             <button type="button" class="btn btn-secondary">Left</button>
+            //             <button type="button" class="btn btn-secondary">Middle</button>
+            //             <button type="button" class="btn btn-secondary">Right</button>
+            //         </div>
+            //    </li>
+            // `);
+
+            $("#stopList").append(`
+                <li class="text-center">
+                    <button id="btnRemoveAllStops" type="button" class="btn btn-danger btn-sm"><i class="fa fa-trash"></i></button>
+                </li>
+            `);
+            $("#btnRemoveAllStops").click(() => {
+                stops.forEach(stop => removeStop(stop.id));
+            });
+        }else{
+            $("#stopList").append(`
+                <p><small>Ingrese paradas con la barra de búsqueda.</small></p>
+            `);
+        }
     }
 
 });
