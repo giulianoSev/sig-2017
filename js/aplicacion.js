@@ -37,9 +37,8 @@ require([
     };
     var routeSymbol = {
         type: "simple-line",
-        color: "lightblue",
-        width: "2px",
-        style: "solid"
+        color: [0, 0, 255, 0.5],
+        width: 5
     };
     var simulating = false;
 
@@ -208,11 +207,7 @@ require([
         .solve(routeParams)
         .then((data) => {
             var routeResult = data.routeResults[0].route;
-            routeResult.symbol = {
-                type: "simple-line",
-                color: [0, 0, 255, 0.5],
-                width: 5
-            };
+            routeResult.symbol = routeSymbol;
             routeLyr.removeAll();
             routeLyr.add(routeResult);
 
@@ -325,9 +320,37 @@ require([
 
     // Carga una ruta seleccionada desde el feature server
     function loadRoute(){
-        // TODO
-        alert("Falta hacer");
-        //var name = window.prompt("Nombre de la ruta", "");
+        var name = window.prompt("Nombre de la ruta", "");
+        if(!name){
+            return;
+        }
+        if(isNullOrWhitespace(name) || !isAlphanumeric(name)){
+            alert(`"${name}" es un nombre inválido para la ruta.`);
+            return;
+        }
+
+        var query = new Query();
+        query.where = `notes = 'sig_grupo7_${name}'`;
+        query.returnGeometry = true;
+        query.outSpatialReference = { wkid: 102100 };
+        
+        routesFLyr.queryFeatures(query)
+        .then(featureSet =>{
+            debugger;
+
+            var routeResult = {
+                geometry: featureSet.features[0].geometry,
+                symbol: routeSymbol
+            };
+            routeLyr.removeAll();
+            routeLyr.add(routeResult);
+
+            current_route = routeResult;
+        })
+        .catch (err => {
+            alert(`Error al cargar la ruta ${name}`);
+            console.log(err);
+        })
     }
 
     // Comienza la simulación
@@ -434,6 +457,9 @@ require([
         });
         $("#btnLoadStops").click(() => {
             loadStops();
+        });
+        $("#btnLoadRoute").click(() => {
+            loadRoute();
         });
         $("#btnDownloadPDF").click(() => {
             downloadPDF();
