@@ -145,7 +145,6 @@ require([
             })
         };
         addStop(stop);
-        solveRoute();
     });
 
 
@@ -487,12 +486,29 @@ require([
         });
 
         if(stops.length > 0){
-            $("#stopList").append(`
-                <li class="text-center" style="margin-top: 10px;">
-                    <button id="btnSaveStops" type="button" class="btn btn-success btn-sm" style="cursor: pointer;" title="Guardar paradas"><i class="fa fa-save"></i></button>
-                    <button id="btnRemoveAllStops" type="button" class="btn btn-danger btn-sm" style="cursor: pointer;" title="Borrar todas"><i class="fa fa-trash"></i></button>
-                </li>
-            `);
+            if(stops.length > 1){
+                $("#stopList").append(`
+                    <li class="text-center" style="margin-top: 10px;">
+                        <div class="btn-group btn-group-sm" style="width: 90%;">
+                            <button id="btnRemoveAllStops" type="button" class="btn btn-danger btn-sm"  style="cursor: pointer; width: 20%;" title="Borrar todas"><i class="fa fa-trash"></i></button>
+                            <button id="btnSaveStops"      type="button" class="btn btn-warning btn-sm" style="cursor: pointer; width: 20%;" title="Guardar paradas"><i class="fa fa-save"></i></button>
+                            <button id="btnSolveRoute"     type="button" class="btn btn-success btn-sm" style="cursor: pointer; width: 60%;" title="Generar Ruta"><i class="fa fa-car"></i></button>
+                        </div>
+                    </li>
+                `);
+                $("#btnSolveRoute").click(() => {
+                    solveRoute();
+                });
+            }else{
+                $("#stopList").append(`
+                    <li class="text-center" style="margin-top: 10px;">
+                        <div class="btn-group btn-group-sm" style="width: 90%;">
+                            <button id="btnRemoveAllStops" type="button" class="btn btn-danger btn-sm"  style="cursor: pointer; width: 50%" title="Borrar todas"><i class="fa fa-trash"></i></button>
+                            <button id="btnSaveStops"      type="button" class="btn btn-success btn-sm" style="cursor: pointer; width: 50%" title="Guardar paradas"><i class="fa fa-save"></i></button>
+                        <div>
+                    </li>
+                `);
+            }
             $("#btnSaveStops").click(() => {
                 saveStops();
             });
