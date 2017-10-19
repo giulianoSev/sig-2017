@@ -12,10 +12,13 @@ require([
     "esri/widgets/Search",
     "esri/tasks/Locator",
     "esri/layers/FeatureLayer",
+    "esri/widgets/Print",
+    "esri/widgets/Print/PrintViewModel",
+    "esri/tasks/support/PrintTemplate",
     "dojo/domReady!"
 ], function(
     Map, TileLayer, MapView, Graphic, GraphicsLayer, RouteTask, RouteParameters,
-    FeatureSet, urlUtils, on, Search, Locator, FeatureLayer
+    FeatureSet, urlUtils, on, Search, Locator, FeatureLayer, Print, PrintVM, PrintTemplate
 ) {
     ///////////////////////////
     // DEFINICIONES Y CONSTANTES
@@ -88,12 +91,14 @@ require([
     });
     map.layers.add(routesFLyr);
 
+
     // Init Eventos Javascript
     initDocument();
 
     ///////////////////////////
     // WIDGETS
     //////////////////////////
+
 
     // BÚSQUEDA
     var searchWidget = new Search({
@@ -106,6 +111,26 @@ require([
         }]
     });
     view.ui.add(searchWidget, {position: "top-left", index: 0});
+
+
+    // EXPORTAR A PDF
+    var printWidget = new Print({
+        viewModel: new PrintVM({
+            view: view,
+            //printServiceUrl: "https://utility.arcgisonline.com/arcgis/rest/services/Utilities/PrintingTools/GPServer/Export%20Web%20Map%20Task"
+            //printServiceUrl: "http://sampleserver5.arcgisonline.com/arcgis/rest/services/Utilities/PrintingTools/GPServer/Export%20Web%20Map%20Task"
+            url: "https://sampleserver6.arcgisonline.com/arcgis/rest/services/Utilities/PrintingTools/GPServer/Export%20Web%20Map%20Task"
+        }),
+    });
+
+    // var printWidget = new Print({
+    //     view: view,
+    //     printServiceUrl: "https://utility.arcgisonline.com/arcgis/rest/services/Utilities/PrintingTools/GPServer/Export%20Web%20Map%20Task"
+    // });
+    // view.ui.add(printWidget, "top-right");
+
+    // REMOVE ZOOM
+    // view.ui.remove("zoom");
 
 
     ///////////////////////////
@@ -132,6 +157,7 @@ require([
         addStop(stop);
         solveRoute();
     });
+
 
 
 
@@ -304,7 +330,89 @@ require([
     }
 
     function downloadPDF(){
-        alert("Falta hacer");
+        // printWidget.viewModel.print(new PrintTemplate({
+        //     format: "pdf",
+        //     layout: "a4-landscape",
+        //     layoutOptions: {
+        //         titleText: "SIG - Obligatorio 2",
+        //         authorText: "Grupo 7",
+        //         copyrightText: "SIG - Grupo 7",
+        //         scalebarUnit: "Kilometers",
+        //         legendLayers: [],
+        //         customTextElements: []
+        //     },
+        //     exportOptions: {
+        //         width: 500,
+        //         height: 400
+        //     }
+        // }))
+        printWidget.viewModel.print({
+	        operationalLayers: [{
+                id: "15f360df669-layer-0",
+                title: "World Street Map",
+                opacity: 1,
+                minScale: 0,
+                maxScale: 0,
+                url: "https://services.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer",
+                token: null
+            },{
+                id: "15f360df669-layer-1",
+                title: null,
+                opacity: 1,
+                minScale: 0,
+                maxScale: 0,
+                url: null,
+                token: null,
+                featureCollection: {
+                    layers: []
+                }
+            }],
+            mapOptions: {
+                extent: {
+                    xmin: -13923904.960476931,
+                    ymin: 3107321.5351975188,
+                    xmax: -7608371.935444207,
+                    ymax: 5220652.493225509,
+                    spatialReference: {
+                        latestWkid: 3857,
+                        wkid: 102100
+                    }
+                },
+                spatialReference: {
+                    latestWkid: 3857,
+                    wkid: 102100
+                },
+                showAttribution: true,
+                scale: 18489297.737236
+            },
+            exportOptions: {
+                dpi: 96
+            },
+            layoutOptions: {
+                titleText: "asda",
+                authorText: "",
+                copyrightText: "",
+                scaleBarOptions: {},
+                legendOptions: {
+                    operationalLayers: [
+                        {
+                            id: "15f360df669-layer-1"
+                        },
+                        {
+                            id: "15f360df669-layer-1"
+                        }
+                    ]
+                }
+            }
+        })
+        .then(data => {
+            console.log("URL: ", data);
+            window.open(data.url);
+        })
+        .catch(err => {
+            alert("Hubo un error al crear el PDF.");
+            console.log(err);
+        });
     }
 
     ///////////////////////////
