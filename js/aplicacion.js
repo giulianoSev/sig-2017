@@ -31,6 +31,12 @@ require([
           width: 2
         }
     };
+    var routeSymbol = {
+        type: "simple-line",
+        color: "lightblue",
+        width: "2px",
+        style: "solid"
+    };
 
     ///////////////////////////
     // AUTENTICACIÓN
@@ -63,15 +69,23 @@ require([
     // Se deja definida la capa de rutas
     var routeLyr = new GraphicsLayer();
     map.layers.add(routeLyr);
+    var current_route = null;
 
-    // Se define la feature layer para guardar los puntos
+    // Se define la feature layer para guardar los puntos como eventos
     var stopsFLyr = new FeatureLayer({
         url: "http://sampleserver5.arcgisonline.com/arcgis/rest/services/LocalGovernment/Events/FeatureServer/0",
-        outFields: ["*"]
-        // mode: FeatureLayer.MODE_SNAPSHOT,
+        outFields: ["*"],
+        visible: false
     });
     map.layers.add(stopsFLyr);
 
+    // Se define la feature layer para guardar las rutas como trails
+    var routesFLyr = new FeatureLayer({
+        url: "http://sampleserver5.arcgisonline.com/arcgis/rest/services/LocalGovernment/Recreation/FeatureServer/1",
+        outFields: ["*"],
+        visible: false
+    });
+    map.layers.add(routesFLyr);
 
     // Init Eventos Javascript
     initDocument();
@@ -152,6 +166,7 @@ require([
 
         // Quito la ruta 
         routeLyr.removeAll();
+        current_route = null;
 
         // Cambios en View
         updateStopsList();
@@ -186,12 +201,15 @@ require([
             };
             routeLyr.removeAll();
             routeLyr.add(routeResult);
+
+            current_route = routeResult;
         })
         .catch(() => {
             alert("Ocurrió un error al calcular la ruta");
         })
     }
 
+    // Guarda las paradas en el feature server
     function saveStops(){
         var adds = [];
         stops.forEach(stop => {
@@ -208,6 +226,49 @@ require([
         });
     }
 
+    // Carga las paradas desde el feature server
+    function loadStops(){
+        // TODO
+        alert("Falta hacer");
+    }
+
+    // Guarda la ruta en el feature server
+    function saveRoute(){
+        if(current_route){
+            // Pregunto por nombre para guardarlo
+            var name = window.prompt("Nombre de la ruta", "");
+            if(isNullOrWhitespace(name) || !isAlphanumeric(name)){
+                alert(`"" es un nombre inválido para la ruta.`);
+                return;
+            }
+            var route_graphic = new Graphic({
+                geometry: current_route.geometry,
+                symbol: routeSymbol,
+                attributes: {
+                    trailtype: 4,
+                    notes: "sig_grupo7_" + name
+                }
+            });
+            routesFLyr.applyEdits({
+                addFeatures: [route_graphic]
+            })
+            .then(() => {
+                alert("Ruta guardada!");
+            })
+            .catch(() => {
+                alert("Error al guardar ruta.");
+            });
+        }else{
+            alert("Debe haber una ruta cargada para guardar.");
+        }
+    }
+
+    // Carga una ruta seleccionada desde el feature server
+    function loadRoute(){
+        // TODO
+        alert("Falta hacer");
+        //var name = window.prompt("Nombre de la ruta", "");
+    }
 
     ///////////////////////////
     // AUXILIARES HTML
@@ -217,6 +278,9 @@ require([
     function initDocument(){
         $("#btnSaveStops").click(() => {
             saveStops();
+        });
+        $("#btnSaveRoute").click(() => {
+            saveRoute();
         });
         $('.sidebarCollapse').on('click', function () {
             if($("#sidebar").hasClass("active")){
@@ -229,7 +293,6 @@ require([
             return false;
         });
     }
-
 
     // Agrega parada a lista de paradas
     function addStopHtml(stop){
@@ -272,6 +335,20 @@ require([
                 <p><small>Ingrese paradas con la barra de búsqueda.</small></p>
             `);
         }
+    }
+
+    ///////////////////////////
+    // UTILS
+    //////////////////////////
+
+    function isNullOrWhitespace(str) {
+        if (typeof str === 'undefined' || str == null) 
+            return true;
+        return str.replace(/\s/g, '').length < 1;
+    }
+
+    function isAlphanumeric(str){
+        return /^[a-z0-9]+$/i.test(str);
     }
 
 });
