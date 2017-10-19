@@ -190,7 +190,7 @@ require([
     function solveRoute(){
         var routeParams = new RouteParameters({
             stops: new FeatureSet(),
-            outSpatialReference: {wkid: 3857}
+            // outSpatialReference: {wkid: 3857}
         });
 
         stops.forEach(stop => {
@@ -245,6 +245,7 @@ require([
         var query = new Query();
         query.where = "event_type = '17'";
         query.returnGeometry = true;
+        query.outSpatialReference = { wkid: 102100};
         stopsFLyr.queryFeatures(query)
         .then((featureSet) => {
             console.log(featureSet);
@@ -492,7 +493,7 @@ require([
                         <div class="btn-group btn-group-sm" style="width: 90%;">
                             <button id="btnRemoveAllStops" type="button" class="btn btn-danger btn-sm"  style="cursor: pointer; width: 20%;" title="Borrar todas"><i class="fa fa-trash"></i></button>
                             <button id="btnSaveStops"      type="button" class="btn btn-warning btn-sm" style="cursor: pointer; width: 20%;" title="Guardar paradas"><i class="fa fa-save"></i></button>
-                            <button id="btnSolveRoute"     type="button" class="btn btn-success btn-sm" style="cursor: pointer; width: 60%;" title="Generar Ruta"><i class="fa fa-car"></i></button>
+                            <button id="btnSolveRoute"     type="button" class="btn btn-success btn-sm" style="cursor: pointer; width: 60%;" title="Generar Ruta"><i class="fa fa-bicycle"></i></button>
                         </div>
                     </li>
                 `);
