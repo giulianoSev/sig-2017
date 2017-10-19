@@ -238,8 +238,11 @@ require([
         if(current_route){
             // Pregunto por nombre para guardarlo
             var name = window.prompt("Nombre de la ruta", "");
+            if(!name){
+                return;
+            }
             if(isNullOrWhitespace(name) || !isAlphanumeric(name)){
-                alert(`"" es un nombre inválido para la ruta.`);
+                alert(`"${name}" es un nombre inválido para la ruta.`);
                 return;
             }
             var route_graphic = new Graphic({
@@ -280,16 +283,21 @@ require([
                 return;
             }
             alert("Falta hacer");
+            simulating = true;
+            chgSimBtn();
         }else{
             alert("Primero debe indicarse una ruta.");
             return;
         }
     }
 
+    // Para la simulación
     function stopSimulation(){
         // TODO
         if(simulating){
             alert("Falta hacer");
+            simulating = false;
+            chgSimBtn();
         }else{
             alert("No hay una simulación en curso.")
         }
@@ -308,7 +316,11 @@ require([
             saveRoute();
         });
         $("#btnSimStatus").click(() => {
-            startSimulation();
+            if(simulating){
+                stopSimulation();
+            }else{
+                startSimulation();
+            }
         });
         $('.sidebarCollapse').on('click', function () {
             if($("#sidebar").hasClass("active")){
@@ -368,10 +380,12 @@ require([
     // Actualiza el boton de play
     function chgSimBtn(){
         if(simulating){
-            $("#btnSimStatus").class("btn btn-danger");
+            $("#btnSimStatus").removeClass();
+            $("#btnSimStatus").addClass("btn btn-danger");
             $("#btnSimStatus").html(`<i class="fa fa-stop"></i>`)
         }else{
-            $("#btnSimStatus").class("btn btn-success");
+            $("#btnSimStatus").removeClass();
+            $("#btnSimStatus").addClass("btn btn-success");
             $("#btnSimStatus").html(`<i class="fa fa-play"></i>`)
         }
     }
