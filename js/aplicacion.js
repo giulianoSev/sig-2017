@@ -336,8 +336,26 @@ require([
 
     // Agrega parada a lista de paradas
     function addStopHtml(stop){
-        $("#stopList").append(`<li id="stopListItem${stop.id}""><a href="#">${stop.name} <span class="float-right">&#10006;</span></a></li>`);
-        $("#stopListItem" + stop.id).click(() => {
+        $("#stopList").append(`
+            <li id="stopListItem${stop.id}">
+                <a href="#">
+                    ${stop.name} 
+                    <span class="float-right">
+                        <button type="button" class="btn btn-sm btn-outline-danger" style="cursor: pointer; display: none" title="Borrar parada">&#10006;</button>
+                    </span>
+                </a>
+            </li>`);
+        $(`#stopListItem${stop.id}`).hover(
+            // in
+            () => {
+                $(`#stopListItem${stop.id} a span button`).show();
+            },
+            // out
+            () => {
+                $(`#stopListItem${stop.id} a span button`).hide();
+            }
+        );
+        $(`#stopListItem${stop.id} a span button`).click(() => {
             removeStop(stop.id);    
         });
     }
@@ -364,7 +382,7 @@ require([
 
             $("#stopList").append(`
                 <li class="text-center">
-                    <button id="btnRemoveAllStops" type="button" class="btn btn-danger btn-sm"><i class="fa fa-trash"></i></button>
+                    <button id="btnRemoveAllStops" type="button" class="btn btn-danger btn-sm" style="cursor: pointer;" title="Borrar todas"><i class="fa fa-trash"></i></button>
                 </li>
             `);
             $("#btnRemoveAllStops").click(() => {
