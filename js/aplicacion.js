@@ -37,6 +37,7 @@ require([
         width: "2px",
         style: "solid"
     };
+    var simulating = false;
 
     ///////////////////////////
     // AUTENTICACIÓN
@@ -270,17 +271,44 @@ require([
         //var name = window.prompt("Nombre de la ruta", "");
     }
 
+    // Comienza la simulación
+    function startSimulation(){
+        // TODO
+        if(current_route){
+            if(simulating){
+                alert("Hay una simulación en curso.");
+                return;
+            }
+            alert("Falta hacer");
+        }else{
+            alert("Primero debe indicarse una ruta.");
+            return;
+        }
+    }
+
+    function stopSimulation(){
+        // TODO
+        if(simulating){
+            alert("Falta hacer");
+        }else{
+            alert("No hay una simulación en curso.")
+        }
+    }
+
     ///////////////////////////
     // AUXILIARES HTML
     //////////////////////////
 
-    // Setea eventos jaavascript
+    // Setea eventos javascript
     function initDocument(){
         $("#btnSaveStops").click(() => {
             saveStops();
         });
         $("#btnSaveRoute").click(() => {
             saveRoute();
+        });
+        $("#btnSimStatus").click(() => {
+            startSimulation();
         });
         $('.sidebarCollapse').on('click', function () {
             if($("#sidebar").hasClass("active")){
@@ -314,11 +342,11 @@ require([
             // Ver esto. Capas que queda muy copiado a lo anterior
             // $("#stopList").append(`
             //    <li class="text-center">
-            //         <div class="btn-group btn-group-sm">
-            //             <button type="button" class="btn btn-secondary">Left</button>
-            //             <button type="button" class="btn btn-secondary">Middle</button>
-            //             <button type="button" class="btn btn-secondary">Right</button>
-            //         </div>
+                    // <div class="btn-group btn-group-sm">
+                    //     <button type="button" class="btn btn-secondary">Left</button>
+                    //     <button type="button" class="btn btn-secondary">Middle</button>
+                    //     <button type="button" class="btn btn-secondary">Right</button>
+                    // </div>
             //    </li>
             // `);
 
@@ -334,6 +362,17 @@ require([
             $("#stopList").append(`
                 <p><small>Ingrese paradas con la barra de búsqueda.</small></p>
             `);
+        }
+    }
+
+    // Actualiza el boton de play
+    function chgSimBtn(){
+        if(simulating){
+            $("#btnSimStatus").class("btn btn-danger");
+            $("#btnSimStatus").html(`<i class="fa fa-stop"></i>`)
+        }else{
+            $("#btnSimStatus").class("btn btn-success");
+            $("#btnSimStatus").html(`<i class="fa fa-play"></i>`)
         }
     }
 
