@@ -31,8 +31,12 @@ require([
     // DEFINICIONES Y CONSTANTES
     //////////////////////////
 
+    // Varibles Globales
     var token = null;
     var stops = [];
+    var simulating = false;
+
+    // Símbolos
     var stopMarker = {
         type: "simple-marker",
         color: [226, 119, 40],
@@ -70,7 +74,7 @@ require([
         color: [131, 94, 242, 0.5],
         width: 3
     };
-    var simulating = false;
+    
 
     ///////////////////////////
     // AUTENTICACIÓN
@@ -332,7 +336,8 @@ require([
             addFeatures: adds
         })
         .then(() => {
-            alert("Guardado!");
+            showToast("Paradas guardadas!");
+            //alert("Guardado!");
         })
         .catch(() => {
             alert("Error!");
@@ -407,7 +412,8 @@ require([
                 addFeatures: [route_graphic]
             })
             .then(() => {
-                alert("Ruta guardada!");
+                showToast("Ruta guardada!");
+                //alert("Ruta guardada!");
             })
             .catch(() => {
                 alert("Error al guardar ruta.");
@@ -489,7 +495,8 @@ require([
             simulating = false;
             chgSimBtn();
 
-            alert("Simulación finalizada");
+            showToast("Simulación finalizada!");
+            //alert("Simulación finalizada");
         }else{
             alert("No hay una simulación en curso.")
         }
@@ -954,6 +961,16 @@ require([
 
     function hideSpinner(){
         $("#spinner").hide(200);
+    }
+
+    function showToast(msg){
+        $("#toast").html(msg);
+        $("#toast").show(500);
+        setTimeout(hideAlert, 5000);
+    }
+
+    function hideAlert(){
+        $("#toast").hide(500);
     }
 
     ///////////////////////////

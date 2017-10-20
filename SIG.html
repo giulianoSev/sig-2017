@@ -22,6 +22,14 @@
       left: 10px;
       display: none;
     }    
+
+    #toast{
+        position: absolute;
+        top: 85%;
+        left: 50%;
+        z-index: 100;
+    }
+
   </style>
 
   <link rel="stylesheet" href="https://js.arcgis.com/4.5/esri/css/main.css">
@@ -38,6 +46,7 @@
 
 <body>
   <div id="spinner" class="loading">Loading&#8230;</div>
+  <div id="toast" class="btn btn-success" style="display:none">ALERTA</div>
   <div class="wrapper">
     <!-- Sidebar Holder -->
     <nav id="sidebar">
@@ -59,11 +68,6 @@
             </p>
         </ul>
 
-        <!-- <ul id="stopList" class="list-unstyled components">
-            <p>Opciones</p>
-
-        </ul> -->
-
         <ul class="list-unstyled CTAs">
             <p>Simulación</p>
             <li class="text-center" style="margin-bottom: 5px;">
@@ -73,6 +77,7 @@
                   <button id="btnSimStatus" type="button" style="width: 34%; cursor: pointer;" class="btn btn-success" title="Comenzar simulación" disabled><i class="fa fa-play"></i></button>
               </div>
             </li>
+            <p>Opciones</p>
             <li><a id="btnDownloadPDF" href="#" class="btn btn-danger" disabled>Exportar a PDF</a></li>
             <li><a id="btnClearEventLayer" href="#" class="btn btn-danger" disabled>Borrar Paradas del Server</a></li>
             <li><a id="btnClearRouteLayer" href="#" class="btn btn-danger" disabled>Borrar Rutas del Server</a></li>
