@@ -486,6 +486,8 @@ require([
             // Se utiliza Geometry Engine para que sea más rápido (podría usarse el Geometry Service)
             var path = geometryEngine.densify(current_route.geometry, simulation.segment_length, "meters").paths[0];
             simulation.coordinates = path;
+            
+            disableSimButtons();
             showToast("Simulación iniciada", "info");
             updateSimulation(simulation);
         }else{
@@ -498,8 +500,10 @@ require([
     function stopSimulation(){
         if(simulating){
             simulating = false;
+            
             chgSimBtn();
-
+            enableSimButtons();
+            enableSimButtons();
             showToast("Simulación finalizada!", "info");
         }else{
             showToast("No hay una simulación en curso", "error");
@@ -953,22 +957,31 @@ require([
 
     // Habilita los botones mientras no haya simulación
     function enableSimButtons(){
-
+        $("#btnRemoveAllStops").prop('disabled', false);
+        $("#btnLoadRoute").prop('disabled', false);
+        $("#btnLoadStops").prop('disabled', false);
+        $("#btnSolveRoute").prop('disabled', false);
     }
 
     // Deshabilita los botones mientras haya simulación
     function disableSimButtons(){
-        
+        $("#btnRemoveAllStops").prop('disabled', true);
+        $("#btnLoadRoute").prop('disabled', true);
+        $("#btnLoadStops").prop('disabled', true);
+        $("#btnSolveRoute").prop('disabled', true);
     }
 
+    // Muestra el spinner
     function showSpinner(){
         $("#spinner").fadeIn(200);
     }
 
+    // Oculta el spinner
     function hideSpinner(){
         $("#spinner").fadeOut(200);
     }
 
+    // Muestra el toast
     function showToast(msg, type){
         $("#toast").removeClass();
         
@@ -983,6 +996,7 @@ require([
         setTimeout(hideToast, 5000);
     }
 
+    // Oculta el toast
     function hideToast(){
         $("#toast").fadeOut(500);
     }
