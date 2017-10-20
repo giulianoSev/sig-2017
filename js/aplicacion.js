@@ -486,6 +486,7 @@ require([
             // Se utiliza Geometry Engine para que sea más rápido (podría usarse el Geometry Service)
             var path = geometryEngine.densify(current_route.geometry, simulation.segment_length, "meters").paths[0];
             simulation.coordinates = path;
+            showToast("Simulación iniciada", "info");
             updateSimulation(simulation);
         }else{
             showToast("Primero debe indicarse una ruta.", "error");
@@ -961,11 +962,11 @@ require([
     }
 
     function showSpinner(){
-        $("#spinner").show(200);
+        $("#spinner").fadeIn(200);
     }
 
     function hideSpinner(){
-        $("#spinner").hide(200);
+        $("#spinner").fadeOut(200);
     }
 
     function showToast(msg, type){
@@ -978,12 +979,12 @@ require([
         }
 
         $("#toast").html(msg);
-        $("#toast").show(500);
+        $("#toast").fadeIn(500);
         setTimeout(hideToast, 5000);
     }
 
     function hideToast(){
-        $("#toast").hide(500);
+        $("#toast").fadeOut(500);
     }
 
     ///////////////////////////
