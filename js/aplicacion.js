@@ -392,6 +392,7 @@ require([
             .then(data => {
                 var simulation = {
                     iteration: 0,
+                    velocity: 100, // 30m ~ 100ms => 1080 km/h
                     coordinates: data[0].paths[0]
                 }
                 updateSimulation(simulation);
@@ -433,7 +434,7 @@ require([
             mobileLyr.add(new_marker);
 
             simulation.iteration++;
-            setTimeout(updateSimulation, 100, simulation);
+            setTimeout(updateSimulation, simulation.velocity, simulation);
         }
     }
 
