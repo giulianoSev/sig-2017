@@ -16,10 +16,14 @@ require([
     "esri/widgets/Print/PrintViewModel",
     "esri/tasks/support/PrintTemplate",
     "esri/tasks/support/Query",
+    "esri/tasks/GeometryService",
+    "esri/tasks/support/DensifyParameters",
+    "esri/config",
     "dojo/domReady!"
 ], function(
     Map, TileLayer, MapView, Graphic, GraphicsLayer, RouteTask, RouteParameters,
-    FeatureSet, urlUtils, on, Search, Locator, FeatureLayer, Print, PrintVM, PrintTemplate, Query
+    FeatureSet, urlUtils, on, Search, Locator, FeatureLayer, Print, PrintVM, PrintTemplate, Query, GeometryService,
+    DensifyParameters, esriConfig
 ) {
     ///////////////////////////
     // DEFINICIONES Y CONSTANTES
@@ -39,6 +43,12 @@ require([
         type: "simple-line",
         color: [0, 0, 255, 0.5],
         width: 5
+    };
+    var carSymbol = {
+        type: "picture-marker",
+        url: "assets/car.png",
+        width: "40px",
+        height: "40px"
     };
     var simulating = false;
 
@@ -68,18 +78,30 @@ require([
     // Se crea y carga el mapa
     var tiled_map = new TileLayer("http://services.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer");
     var map = new Map({layers: [tiled_map]});
-    var view = new MapView({container: "viewDiv", zoom: 4, center: [-95,39], map: map});
+    var view = new MapView({
+        container: "viewDiv", 
+        zoom: 4, 
+        center: [-95,39], 
+        spatialReference: { wkid: 102100 },
+        map: map
+    });
 
+    
     // Se deja definida la capa de rutas
     var routeLyr = new GraphicsLayer();
     map.layers.add(routeLyr);
     var current_route = null;
 
-    // Se define la feature layer para guardar los puntos como eventos
+    // Se deja definida la capa del móvil
+    var mobileLyr = new GraphicsLayer();
+    map.layers.add(mobileLyr);
+
+    // Se define la feature layer para guardar las paradas como eventos
     var stopsFLyr = new FeatureLayer({
         url: "http://sampleserver5.arcgisonline.com/arcgis/rest/services/LocalGovernment/Events/FeatureServer/0",
         outFields: ["*"],
-        visible: false
+        visible: false,
+        spatialReference: { wkid: 102100 }
     });
     map.layers.add(stopsFLyr);
 
@@ -87,10 +109,17 @@ require([
     var routesFLyr = new FeatureLayer({
         url: "http://sampleserver5.arcgisonline.com/arcgis/rest/services/LocalGovernment/Recreation/FeatureServer/1",
         outFields: ["*"],
-        visible: false
+        visible: false,
+        spatialReference: { wkid: 102100 },
     });
     map.layers.add(routesFLyr);
 
+    // Se define el proxy
+    // esriConfig.request.corsEnabledServers.push("tasks.arcgisonline.com");
+    // esriConfig.request.proxyUrl = "/proxy/";
+
+    // Se define el servicio para operaciones espaciales
+    var geometrySvc = new GeometryService({url: "https://sampleserver6.arcgisonline.com/arcgis/rest/services/Utilities/Geometry/GeometryServer"});
 
     // Init Eventos Javascript
     initDocument();
@@ -189,7 +218,7 @@ require([
     function solveRoute(){
         var routeParams = new RouteParameters({
             stops: new FeatureSet(),
-            // outSpatialReference: {wkid: 3857}
+            outSpatialReference: { wkid: 102100 }
         });
 
         stops.forEach(stop => {
@@ -240,7 +269,7 @@ require([
         var query = new Query();
         query.where = "event_type = '17'";
         query.returnGeometry = true;
-        query.outSpatialReference = { wkid: 102100};
+        query.outSpatialReference = { wkid: 102100 };
         stopsFLyr.queryFeatures(query)
         .then((featureSet) => {
             console.log(featureSet);
@@ -267,17 +296,6 @@ require([
 
                 addStop(stop);
             });
-
-            // if (results.features.length>0) {
-            //     for (var i = 0; i < results.features.length; i++) { 
-            //         var loadedStop = {
-            //             name: results.features[i].attributes.description,
-            //             geometry: results.features[i].geometry
-                    
-            //         }
-            //         console.log(results.features[i].attributes.description );
-            //     }
-            // }
         })
         .catch(err => {
             alert("Ocurrió un error cargando las paradas");
@@ -361,9 +379,27 @@ require([
                 alert("Hay una simulación en curso.");
                 return;
             }
-            alert("Falta hacer");
             simulating = true;
             chgSimBtn();
+
+            // Convierto la ruta en series de puntos equidistantes
+            var densifyParams = new DensifyParameters();
+            densifyParams.geodesic = true;
+            densifyParams.lengthUnit = "meters";
+            densifyParams.maxSegmentLength = 30;
+            densifyParams.geometries = [current_route.geometry];
+            geometrySvc.densify(densifyParams)
+            .then(data => {
+                var simulation = {
+                    iteration: 0,
+                    coordinates: data[0].paths[0]
+                }
+                updateSimulation(simulation);
+            })
+            .catch(err => {
+                alert("Error al calcular los puntos de ruta");
+                console.log("Densify: ", err);
+            });
         }else{
             alert("Primero debe indicarse una ruta.");
             return;
@@ -374,12 +410,44 @@ require([
     function stopSimulation(){
         // TODO
         if(simulating){
-            alert("Falta hacer");
+            //alert("Falta hacer");
             simulating = false;
             chgSimBtn();
         }else{
             alert("No hay una simulación en curso.")
         }
+    }
+
+    // Actualiza el mapa durante la simulación
+    function updateSimulation(simulation){
+        if(simulating){
+            // Si ya no tengo mas coordenadas termino
+            if(simulation.iteration >= simulation.coordinates.length){
+                stopSimulation();
+            }
+
+            // Busca la coordenada, crea el marcador y lo agrega a la capa del móvil.
+            var next_coordinate = simulation.coordinates[simulation.iteration];
+            var new_marker = createSimulationMarker(next_coordinate[0], next_coordinate[1]);
+            mobileLyr.removeAll();
+            mobileLyr.add(new_marker);
+
+            simulation.iteration++;
+            setTimeout(updateSimulation, 100, simulation);
+        }
+    }
+
+    // Crea el marcador del móvil
+    function createSimulationMarker(lng, lat){
+        return new Graphic({
+                geometry: {
+                    type: "point",
+                    x: lng,
+                    y: lat,
+                    spatialReference: { wkid: 102100 }
+                },
+                symbol: carSymbol
+            });
     }
 
     // Ejecuta el servicio Print para generar el PDF y luego se descarga
@@ -466,6 +534,9 @@ require([
         });
         $("#btnClearEventLayer").click(() => {
             clearFeatureLayer(stopsFLyr);
+        });
+        $("#btnClearRouteLayer").click(() => {
+            clearFeatureLayer(routesFLyr);
         });
         $('.sidebarCollapse').on('click', function () {
             if($("#sidebar").hasClass("active")){
