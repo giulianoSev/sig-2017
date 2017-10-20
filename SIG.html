@@ -22,6 +22,14 @@
       left: 10px;
       display: none;
     }    
+
+    #toast{
+        position: absolute;
+        top: 85%;
+        left: 50%;
+        z-index: 100;
+    }
+
   </style>
 
   <link rel="stylesheet" href="https://js.arcgis.com/4.5/esri/css/main.css">
@@ -37,6 +45,8 @@
 </head>
 
 <body>
+  <div id="spinner" class="loading">Loading&#8230;</div>
+  <div id="toast" class="btn btn-success" style="display:none">ALERTA</div>
   <div class="wrapper">
     <!-- Sidebar Holder -->
     <nav id="sidebar">
@@ -53,27 +63,24 @@
             <p>
               <small>Ingrese paradas con la barra de búsqueda.</small>
               <li class="text-center">
-                  <button id="btnLoadStops" type="button" class="btn btn-success btn-sm" style="cursor: pointer;" title="Cargar paradas">Cargar paradas <i class="fa fa-road"></i></button>
+                  <button id="btnLoadStops" type="button" class="btn btn-success btn-sm" style="cursor: pointer;" title="Cargar paradas" disabled>Cargar paradas <i class="fa fa-road"></i></button>
               </li>
             </p>
         </ul>
 
-        <!-- <ul id="stopList" class="list-unstyled components">
-            <p>Opciones</p>
-
-        </ul> -->
-
         <ul class="list-unstyled CTAs">
+            <p>Simulación</p>
             <li class="text-center" style="margin-bottom: 5px;">
               <div class="btn-group" style="width: 100%;">
-                  <button id="btnLoadRoute" type="button" style="width: 33%; cursor: pointer;" class="btn btn-secondary" title="Cargar ruta"><i class="fa fa-download"></i></button>
-                  <button id="btnSaveRoute" type="button" style="width: 33%; cursor: pointer;" class="btn btn-secondary" title="Guardar ruta"><i class="fa fa-upload"></i></button>
-                  <button id="btnSimStatus" type="button" style="width: 34%; cursor: pointer;" class="btn btn-success" title="Comenzar simulación"><i class="fa fa-play"></i></button>
+                  <button id="btnLoadRoute" type="button" style="width: 33%; cursor: pointer;" class="btn btn-secondary" title="Cargar ruta" disabled><i class="fa fa-download"></i></button>
+                  <button id="btnSaveRoute" type="button" style="width: 33%; cursor: pointer;" class="btn btn-secondary" title="Guardar ruta" disabled><i class="fa fa-upload"></i></button>
+                  <button id="btnSimStatus" type="button" style="width: 34%; cursor: pointer;" class="btn btn-success" title="Comenzar simulación" disabled><i class="fa fa-play"></i></button>
               </div>
             </li>
-            <li><a id="btnDownloadPDF" href="#" class="btn btn-danger">Exportar a PDF</a></li>
-            <li><a id="btnClearEventLayer" href="#" class="btn btn-danger">Borrar Paradas del Server</a></li>
-            <li><a id="btnClearRouteLayer" href="#" class="btn btn-danger">Borrar Rutas del Server</a></li>
+            <p>Opciones</p>
+            <li><a id="btnDownloadPDF" href="#" class="btn btn-danger" disabled>Exportar a PDF</a></li>
+            <li><a id="btnClearEventLayer" href="#" class="btn btn-danger" disabled>Borrar Paradas del Server</a></li>
+            <li><a id="btnClearRouteLayer" href="#" class="btn btn-danger" disabled>Borrar Rutas del Server</a></li>
         </ul>
     </nav>
 

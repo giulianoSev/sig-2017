@@ -24,18 +24,23 @@ require([
     "esri/tasks/support/PrintParameters",
     "esri/tasks/support/PrintTemplate",
     "esri/tasks/support/LegendLayer",
+    "esri/geometry/geometryEngine",
     "dojo/domReady!"
 ], function(
     Map, TileLayer, MapView, Graphic, GraphicsLayer, RouteTask, RouteParameters,
     FeatureSet, urlUtils, on, Search, Locator, FeatureLayer, Print, PrintVM, PrintTemplate, Query, GeometryService,
-    DensifyParameters, QueryTask, BufferParameters, PrintTask, PrintParameters, PrintTemplate, LegendLayer
+    DensifyParameters, QueryTask, BufferParameters, PrintTask, PrintParameters, PrintTemplate, LegendLayer, geometryEngine
 ) {
-    ///////////////////////////
+    //////////////////////////////////////////////////////
     // DEFINICIONES Y CONSTANTES
-    //////////////////////////
+    //////////////////////////////////////////////////////
 
+    // Varibles Globales
     var token = null;
     var stops = [];
+    var simulating = false;
+
+    // Símbolos
     var stopMarker = {
         type: "simple-marker",
         color: [226, 119, 40],
@@ -73,11 +78,11 @@ require([
         color: [131, 94, 242, 0.5],
         width: 3
     };
-    var simulating = false;
+    
 
-    ///////////////////////////
+    //////////////////////////////////////////////////////
     // AUTENTICACIÓN
-    //////////////////////////
+    //////////////////////////////////////////////////////
 
     $.ajax({
         type: "POST", 
@@ -90,13 +95,13 @@ require([
             token = arcgis_token;
         },
         error: () => {
-            alert("Error al obtener el token.");
+            showToast("Error al obtener el token", "error");
         }
     });
 
-    ///////////////////////////
+    //////////////////////////////////////////////////////
     // INIT
-    //////////////////////////
+    //////////////////////////////////////////////////////
 
     // Se crea y carga el mapa
     var tiled_map = new TileLayer("http://services.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer");
@@ -159,10 +164,6 @@ require([
     });
     map.layers.add(routesFLyr);
 
-    // Se define el proxy
-    // esriConfig.request.corsEnabledServers.push("tasks.arcgisonline.com");
-    // esriConfig.request.proxyUrl = "/proxy/";
-
     // Se define el servicio para operaciones espaciales
     var geometrySvc = new GeometryService({url: "https://sampleserver6.arcgisonline.com/arcgis/rest/services/Utilities/Geometry/GeometryServer"});
 
@@ -173,9 +174,9 @@ require([
     // Init Eventos Javascript
     initDocument();
 
-    ///////////////////////////
+    //////////////////////////////////////////////////////
     // WIDGETS
-    //////////////////////////
+    //////////////////////////////////////////////////////
 
 
     // BÚSQUEDA
@@ -217,9 +218,9 @@ require([
     });
 
 
-    ///////////////////////////
+    //////////////////////////////////////////////////////
     // EVENTOS
-    //////////////////////////
+    //////////////////////////////////////////////////////
 
     // BUSQUEDA: Evento resultado seleccionado
     // Se agrega la coordenada a las paradas
@@ -243,9 +244,9 @@ require([
     });
 
 
-    ///////////////////////////
+    //////////////////////////////////////////////////////
     // AUXILIARES JS
-    //////////////////////////
+    //////////////////////////////////////////////////////
 
     // Agrega una parada y su punto en el mapa
     function addStop(stop){
@@ -346,10 +347,11 @@ require([
         });
 
         if(routeParams.stops.features.length < 2){
-            alert("Tiene que haber 2 o más paradas.");
+            showToast("Tiene que haber 2 o más paradas", "error");
             return;
         }
 
+        showSpinner();
         (new RouteTask({
             url: `https://route.arcgis.com/arcgis/rest/services/World/Route/NAServer/Route_World?token=${token.access_token}`
         }))
@@ -361,10 +363,13 @@ require([
             routeLyr.add(routeResult);
 
             current_route = routeResult;
+            enableRouteButtons();
+            showToast("Ruta calculada con éxito", "info");
         })
         .catch(() => {
-            alert("Ocurrió un error al calcular la ruta");
+            showToast("Ocurrió un error al calcular la ruta", "error");
         })
+        .then(() => hideSpinner());
     }
 
     // Guarda las paradas en el feature server
@@ -373,15 +378,18 @@ require([
         stops.forEach(stop => {
             adds.push(stop.graphic);
         });
+        showSpinner();
         stopsFLyr.applyEdits({
             addFeatures: adds
         })
         .then(() => {
-            alert("Guardado!");
+            showToast("Paradas guardadas!", "info");
         })
-        .catch(() => {
-            alert("Error!");
-        });
+        .catch(err => {
+            console.log("Save Stops: ", err);
+            showToast("Ocurrió un error guardando las paradas", "error");
+        })
+        .then(() => hideSpinner());
     }
 
     // Carga las paradas desde el feature server
@@ -390,11 +398,13 @@ require([
         query.where = "event_type = '17'";
         query.returnGeometry = true;
         query.outSpatialReference = { wkid: 102100 };
+
+        showSpinner();
         stopsFLyr.queryFeatures(query)
         .then((featureSet) => {
             console.log(featureSet);
             if(featureSet.features.length < 1){
-                alert("No hay paradas guardadas.");
+                showToast("No hay paradas guardadas", "error");
                 return;
             }
 
@@ -416,11 +426,14 @@ require([
                 };
 
                 addStop(stop);
+                showToast("Paradas cargadas con éxito", "info");
             });
         })
         .catch(err => {
-            alert("Ocurrió un error cargando las paradas");
-        });
+            console.log(err);
+            showToast("Ocurrió un error cargando las paradas", "error");
+        })
+        .then(() => hideSpinner());
     }
 
     // Guarda la ruta en el feature server
@@ -432,7 +445,7 @@ require([
                 return;
             }
             if(isNullOrWhitespace(name) || !isAlphanumeric(name)){
-                alert(`"${name}" es un nombre inválido para la ruta.`);
+                showToast(`"${name}" es un nombre inválido para la ruta.`, "error");
                 return;
             }
             var route_graphic = new Graphic({
@@ -443,17 +456,21 @@ require([
                     notes: "sig_grupo7_" + name
                 }
             });
+
+            showSpinner();
             routesFLyr.applyEdits({
                 addFeatures: [route_graphic]
             })
             .then(() => {
-                alert("Ruta guardada!");
+                showToast("Ruta guardada!", "info");
             })
-            .catch(() => {
-                alert("Error al guardar ruta.");
-            });
+            .catch(err => {
+                console.log("Save Route: ", err);
+                showToast("Error al guardar ruta", "error");
+            })
+            .then(() => hideSpinner());
         }else{
-            alert("Debe haber una ruta cargada para guardar.");
+            showToast("Debe haber una ruta cargada para guardar", "error");
         }
     }
 
@@ -464,7 +481,7 @@ require([
             return;
         }
         if(isNullOrWhitespace(name) || !isAlphanumeric(name)){
-            alert(`"${name}" es un nombre inválido para la ruta.`);
+            showToast(`"${name}" es un nombre inválido para la ruta.`, "error");
             return;
         }
 
@@ -473,10 +490,9 @@ require([
         query.returnGeometry = true;
         query.outSpatialReference = { wkid: 102100 };
         
+        showSpinner();
         routesFLyr.queryFeatures(query)
         .then(featureSet =>{
-            debugger;
-
             var routeResult = {
                 geometry: featureSet.features[0].geometry,
                 symbol: routeSymbol
@@ -485,18 +501,21 @@ require([
             routeLyr.add(routeResult);
 
             current_route = routeResult;
+            enableRouteButtons();
+            showToast("Ruta cargada con éxito", "info");
         })
         .catch (err => {
-            alert(`Error al cargar la ruta ${name}`);
-            console.log(err);
+            console.log("Load Route: ", err);
+            showToast(`Error al cargar la ruta ${name}`, "error");
         })
+        .then(() => hideSpinner());
     }
 
     // Comienza la simulación
     function startSimulation(){
         if(current_route){
             if(simulating){
-                alert("Hay una simulación en curso.");
+                showToast("Hay una simulación en curso.", "error");
                 return;
             }
             simulating = true;
@@ -504,20 +523,22 @@ require([
             
             var simulation = {
                 iteration: 0,
-                buffer_size: 3, // 3km
+                buffer_size: 30, // 3km
                 segment_length: 100, // 100m
                 velocity: 100, // 100m ~ 100ms => 360.000 km/h
                 coordinates: null
             }
 
-            getDensify(simulation)
-            .then(path => {
-                simulation.coordinates = path;
-                updateSimulation(simulation);
-            });
+            // Se obtiene la ruta como una serie de puntos equidistantes
+            // Se utiliza Geometry Engine para que sea más rápido (podría usarse el Geometry Service)
+            var path = geometryEngine.densify(current_route.geometry, simulation.segment_length, "meters").paths[0];
+            simulation.coordinates = path;
             
+            disableSimButtons();
+            showToast("Simulación iniciada", "info");
+            updateSimulation(simulation);
         }else{
-            alert("Primero debe indicarse una ruta.");
+            showToast("Primero debe indicarse una ruta.", "error");
             return;
         }
     }
@@ -526,11 +547,13 @@ require([
     function stopSimulation(){
         if(simulating){
             simulating = false;
+            
             chgSimBtn();
-
-            alert("Simulación finalizada");
+            enableSimButtons();
+            enableSimButtons();
+            showToast("Simulación finalizada!", "info");
         }else{
-            alert("No hay una simulación en curso.")
+            showToast("No hay una simulación en curso", "error");
         }
     }
 
@@ -548,25 +571,100 @@ require([
 
             // Calculo el buffer y lo agrego a la capa con el móvil.
             getBuffer(new_marker, simulation).then(buffer => {
-                var counties = queryCounty(buffer, simulation);
-                var states = queryState(buffer, simulation);
+                if(simulating){
+                    var counties = queryCounty(buffer, simulation);
+                    var states = queryState(buffer, simulation);
 
-                // Cuando terminen las queries se renderizan
-                Promise.all([counties, states])
-                .then(results => {
-                    var graphics = _.union(results[0], results[1]);
-                    graphics.push(new_marker);
-                    graphics.push(buffer);
+                    // Cuando terminen las queries se renderizan
+                    Promise.all([counties, states])
+                    .then(results => {
+                        if(simulating){
+                            var graphics = [];
+                            var content = "";
+                            if(results[1]){
+                                content += `
+                                    <b>Estados intersectados: </b><br/>
+                                    <ul>
+                                `;
+                                results[1].forEach(state => {
+                                    graphics.push(state.graphic);
+                                    content += `
+                                        <li>${state.name}, ${state.st_abbrev}</li>
+                                    `;
+                                });
+                                content += `
+                                    </ul>
+                                `;
+                            }
+                            if(results[0]){
+                                content += `
+                                    <b>Condados intersectados: </b><br/>
+                                    <ul>
+                                `;
+                                var total_local_population = 0;
+                                var total_county_population = 0;
+                                results[0].forEach(county => {
+                                    graphics.push(county.graphic);
+                                    var local_population = getLocalPopulation(buffer, county);
+                                    total_local_population += local_population;
+                                    total_county_population += county.total_population;
+                                    var population_percentage = Math.round((local_population / county.total_population) * 100); 
+                                    content += `
+                                        <li>${county.name}, ${county.st_abbrev} - ${local_population}/${county.total_population} (%${population_percentage})</li>
+                                    `;
+                                });
+                                var population_percentage = Math.round((total_local_population / total_county_population) * 100); 
+                                content += `
+                                    </ul>
+                                    <b>Población total en el buffer: ${total_local_population} (%${population_percentage})</b>
+                                `;
+                            }
 
-                    mobileLyr.removeAll();
-                    mobileLyr.addMany(graphics);
 
-                    simulation.iteration++;
-                    setTimeout(updateSimulation, simulation.velocity, simulation);
-                });
+                            graphics.push(new_marker);
+                            graphics.push(buffer);
+
+                            mobileLyr.removeAll();
+                            mobileLyr.addMany(graphics);
+
+                            // Actualizo el popup
+                            view.popup.open({
+                                title: "Información de la simulación",
+                                content: content,
+                                dockEnabled: true,
+                                dockOptions: {
+                                    breakpoint: false,
+                                    buttonEnabled: false,
+                                    position: "top-right"
+                                }
+                            });
+
+                            simulation.iteration++;
+                            setTimeout(updateSimulation, simulation.velocity, simulation);
+                        }
+                    });
+                }
             });
         }
     }
+
+    // Obtiene la cantidad de población dentro del buffer
+    function getLocalPopulation(buffer, county){
+        // Paso el área del condado a metro^2
+        var land_area = county.land_area * 2.58999;
+
+        // Obtengo el área de intersección (con geometry engine porque es más rápido) (podría usarse el Geometry Service)
+        var intersect_area = geometryEngine.geodesicArea(
+            geometryEngine.intersect(buffer.geometry, county.graphic.geometry), 
+            "square-kilometers"
+        );
+        
+        // Obtengo el porcentaje de área ocupada
+        var cover_percentage = intersect_area / land_area;
+
+        // Obtengo la poblacion dentro del buffer
+        return Math.round(county.total_population * cover_percentage);
+    }   
 
     // Crea el marcador del móvil
     function createSimulationMarker(lng, lat){
@@ -594,6 +692,8 @@ require([
 
     // Borra todas las features de una feature layer
     function clearFeatureLayer(fLyr){
+
+        showSpinner();
         fLyr.queryObjectIds()
         .then(objectIds => {
             console.log(objectIds);
@@ -606,37 +706,18 @@ require([
                 deleteFeatures: to_delete
             })
             .then(() => {
-                alert("Feature Layer borrada exitosamente.");
+                showToast("Feature Layer borrada exitosamente", "info");
             })
             .catch(err => {
-                alert("Ocurrió un error limpiando la feature layer.");
+                console.log("Clear Feature Layer: ", err);
+                showToast("Feature Layer borrada exitosamente", "info");
             });
         })
         .catch(err => {
-            alert("Ocurrió un error limpiando la feature layer.");
-        });
-    }
-
-    // Obtiene los puntos equidistantes que conforman la ruta actual
-    function getDensify(simulation){
-        if(simulating){
-            var densifyParams = new DensifyParameters({
-                geometries: [current_route.geometry],
-                lengthUnit: "meters",
-                maxSegmentLength: simulation.segment_length,
-                geodesic: true
-            });
-            return geometrySvc.densify(densifyParams)
-            .then(data => {
-                return data[0].paths[0];
-            })
-            .catch(err => {
-                alert("Error al calcular los puntos de ruta");
-                console.log("Densify: ", err);
-            });
-        }else{
-            alert("No hay simulación en progreso");
-        }
+            console.log("Clear Feature Layer: ", err);
+            showToast("Ocurrió un error limpiando la feature layer", "error");
+        })
+        .then(() => hideSpinner());
     }
 
     // Obtiene el buffer mediante una consulta al Geometry Service
@@ -656,11 +737,11 @@ require([
                 });
             })
             .catch(err => {
-                alert("Error calculando el buffer.");
                 console.log("Buffer: ", err)
+                showToast("Error calculando el buffer", "error");
             });
         }else{
-            alert("No hay simulación en progreso");
+            showToast("No hay simulación en progreso", "error");
         }
     }
 
@@ -683,18 +764,24 @@ require([
                 var counties = [];
                 data.features.forEach(feature => {
                     counties.push({
-                        geometry: feature.geometry,
-                        symbol: countySymbol
+                        name: feature.attributes.NAME, 
+                        total_population: feature.attributes.TOTPOP_CY,
+                        land_area: feature.attributes.LANDAREA,
+                        st_abbrev: feature.attributes.ST_ABBREV,
+                        graphic: new Graphic({
+                            geometry: feature.geometry,
+                            symbol: countySymbol
+                        })
                     });
                 })
                 return counties;
             })
             .catch(err => {
                 console.log("County Query Task: ", err);
-                alert("Error obteniendo los condados.");
+                showToast("Error obteniendo los condados", "error");
             });
         }else{
-            alert("No hay simulación en progreso");
+            showToast("No hay simulación en progreso", "error");
         }
     }
 
@@ -717,27 +804,42 @@ require([
                 var states = [];
                 data.features.forEach(feature => {
                     states.push({
-                        geometry: feature.geometry,
-                        symbol: stateSymbol
+                        name: feature.attributes.NAME,
+                        st_abbrev: feature.attributes.ST_ABBREV,
+                        graphic: new Graphic({
+                            geometry: feature.geometry,
+                            symbol: stateSymbol
+                        })
                     });
                 })
                 return states;
             })
             .catch(err => {
                 console.log("State Query Task: ", err);
-                alert("Error consultando estados");
+                showToast("Error consultando estados", "error");
             });
         }else{
-            alert("No hay simulación en progreso");
+            showToast("No hay simulación en progreso", "error");
         }
     }
 
-    ///////////////////////////
+    //////////////////////////////////////////////////////
     // AUXILIARES HTML
-    //////////////////////////
+    //////////////////////////////////////////////////////
 
     // Setea eventos javascript
     function initDocument(){
+        // Quito spinner
+        hideSpinner();
+
+
+        // Habilita botones de la página
+        $("#btnLoadStops").prop('disabled', false);
+        $("#btnLoadRoute").prop('disabled', false);
+        $("#btnClearEventLayer").prop('disabled', false);
+        $("#btnClearRouteLayer").prop('disabled', false);
+
+        // Evt click
         $("#btnSaveStops").click(() => {
             saveStops();
         });
@@ -876,9 +978,61 @@ require([
         }
     }
 
-    ///////////////////////////
+    // Habilita los botones cuando hay una ruta cargada
+    function enableRouteButtons(){
+        $("#btnSaveRoute").prop('disabled', false);
+        $("#btnSimStatus").prop('disabled', false);
+    }
+
+    // Habilita los botones mientras no haya simulación
+    function enableSimButtons(){
+        $("#btnRemoveAllStops").prop('disabled', false);
+        $("#btnLoadRoute").prop('disabled', false);
+        $("#btnLoadStops").prop('disabled', false);
+        $("#btnSolveRoute").prop('disabled', false);
+    }
+
+    // Deshabilita los botones mientras haya simulación
+    function disableSimButtons(){
+        $("#btnRemoveAllStops").prop('disabled', true);
+        $("#btnLoadRoute").prop('disabled', true);
+        $("#btnLoadStops").prop('disabled', true);
+        $("#btnSolveRoute").prop('disabled', true);
+    }
+
+    // Muestra el spinner
+    function showSpinner(){
+        $("#spinner").fadeIn(200);
+    }
+
+    // Oculta el spinner
+    function hideSpinner(){
+        $("#spinner").fadeOut(200);
+    }
+
+    // Muestra el toast
+    function showToast(msg, type){
+        $("#toast").removeClass();
+        
+        if(type == "error"){
+            $("#toast").addClass("btn btn-danger");
+        }else if(type == "info"){
+            $("#toast").addClass("btn btn-success");
+        }
+
+        $("#toast").html(msg);
+        $("#toast").fadeIn(500);
+        setTimeout(hideToast, 5000);
+    }
+
+    // Oculta el toast
+    function hideToast(){
+        $("#toast").fadeOut(500);
+    }
+
+    //////////////////////////////////////////////////////
     // UTILS
-    //////////////////////////
+    //////////////////////////////////////////////////////
 
     function isNullOrWhitespace(str) {
         if (typeof str === 'undefined' || str == null) 
