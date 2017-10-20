@@ -249,6 +249,8 @@ require([
             for(i; i < stops.length; i++){
                 new_stops.push(stops[i]);
             }
+        }else{
+            return;
         }
 
         stops = new_stops;
