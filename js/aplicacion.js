@@ -59,6 +59,16 @@ require([
             width: 2
         }
     };
+    var countySymbol = {
+        type: "simple-line",
+        color: [247, 153, 71, 0.5],
+        width: 3
+    };
+    var stateSymbol = {
+        type: "simple-line",
+        color: [131, 94, 242, 0.5],
+        width: 3
+    };
     var simulating = false;
 
     ///////////////////////////
@@ -131,8 +141,8 @@ require([
     var geometrySvc = new GeometryService({url: "https://sampleserver6.arcgisonline.com/arcgis/rest/services/Utilities/Geometry/GeometryServer"});
 
     // Se definen las QueryTasks para consultar por los condados y estados
-    var conuntiesQueryTask = new QueryTask("http://services.arcgisonline.com/ArcGIS/rest/services/Demographics/USA_1990-2000_Population_Change/MapServer/3");
-    var statesQueryTask = new QueryTask("http://services.arcgisonline.com/ArcGIS/rest/services/Demographics/USA_1990-2000_Population_Change/MapServer/4");
+    var countiesQueryTask = new QueryTask({url: "http://services.arcgisonline.com/ArcGIS/rest/services/Demographics/USA_1990-2000_Population_Change/MapServer/3"});
+    var statesQueryTask = new QueryTask({url: "http://services.arcgisonline.com/ArcGIS/rest/services/Demographics/USA_1990-2000_Population_Change/MapServer/4"});
 
     // Init Eventos Javascript
     initDocument();
@@ -444,8 +454,8 @@ require([
             var simulation = {
                 iteration: 0,
                 buffer_size: 3, // 3km
-                segment_length: 30, // 30m
-                velocity: 100, // 30m ~ 100ms => 1080 km/h
+                segment_length: 100, // 100m
+                velocity: 100, // 100m ~ 100ms => 360.000 km/h
                 coordinates: null
             }
 
@@ -487,11 +497,22 @@ require([
 
             // Calculo el buffer y lo agrego a la capa con el móvil.
             getBuffer(new_marker, simulation).then(buffer => {
-                mobileLyr.removeAll();
-                mobileLyr.addMany([new_marker, buffer]);
+                var counties = queryCounty(buffer, simulation);
+                var states = queryState(buffer, simulation);
 
-                simulation.iteration++;
-                setTimeout(updateSimulation, simulation.velocity, simulation);
+                // Cuando terminen las queries se renderizan
+                Promise.all([counties, states])
+                .then(results => {
+                    var graphics = _.union(results[0], results[1]);
+                    graphics.push(new_marker);
+                    graphics.push(buffer);
+
+                    mobileLyr.removeAll();
+                    mobileLyr.addMany(graphics);
+
+                    simulation.iteration++;
+                    setTimeout(updateSimulation, simulation.velocity, simulation);
+                });
             });
         }
     }
@@ -580,9 +601,9 @@ require([
                 alert("Error al calcular los puntos de ruta");
                 console.log("Densify: ", err);
             });
-        }else[
-
-        ]
+        }else{
+            alert("No hay simulación en progreso");
+        }
     }
 
     // Obtiene el buffer mediante una consulta al Geometry Service
@@ -611,19 +632,68 @@ require([
     }
 
     // Se consulta por los condados en cierto buffer
-    function queryCounty(){
+    function queryCounty(buffer, simulation){
         if(simulating){
-
+            var query = new Query({
+                geometry: buffer.geometry,
+                spatialRelationship: "intersects",
+                // Atributos a devolver
+                // NAME: Nombre
+                // TOTPOP_CY: Poblacion total
+                // LANDAREA: Área total en millas^2
+                // ST_ABBREV: Estado actual abreviado
+                outFields: ["NAME","TOTPOP_CY","LANDAREA", "ST_ABBREV"],
+                outSpatialReference: { wkid: 102100 },
+                returnGeometry: true
+            });
+            return countiesQueryTask.execute(query).then(data => {
+                var counties = [];
+                data.features.forEach(feature => {
+                    counties.push({
+                        geometry: feature.geometry,
+                        symbol: countySymbol
+                    });
+                })
+                return counties;
+            })
+            .catch(err => {
+                console.log("County Query Task: ", err);
+                alert("Error obteniendo los condados.");
+            });
         }else{
             alert("No hay simulación en progreso");
         }
     }
 
     // Se consulta por los estados en cierto buffer
-    function queryCounty(){
-        // TODO
+    function queryState(buffer, simulation){
         if(simulating){
+            var query = new Query({
+                geometry: buffer.geometry,
+                spatialRelationship: "intersects",
+                // Atributos a devolver
+                // NAME: Nombre
+                // ST_ABBREV: Estado actual abreviado
+                outFields: ["NAME", "ST_ABBREV"],
+                outSpatialReference: { wkid: 102100 },
+                returnGeometry: true
+            });
 
+            return statesQueryTask.execute(query)
+            .then(data => {
+                var states = [];
+                data.features.forEach(feature => {
+                    states.push({
+                        geometry: feature.geometry,
+                        symbol: stateSymbol
+                    });
+                })
+                return states;
+            })
+            .catch(err => {
+                console.log("State Query Task: ", err);
+                alert("Error consultando estados");
+            });
         }else{
             alert("No hay simulación en progreso");
         }
