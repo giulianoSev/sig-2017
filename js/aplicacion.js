@@ -373,7 +373,6 @@ require([
 
     // Comienza la simulación
     function startSimulation(){
-        // TODO
         if(current_route){
             if(simulating){
                 alert("Hay una simulación en curso.");
@@ -409,11 +408,11 @@ require([
 
     // Para la simulación
     function stopSimulation(){
-        // TODO
         if(simulating){
-            //alert("Falta hacer");
             simulating = false;
             chgSimBtn();
+
+            alert("Simulación finalizada");
         }else{
             alert("No hay una simulación en curso.")
         }
