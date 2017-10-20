@@ -15,10 +15,11 @@ require([
     "esri/widgets/Print",
     "esri/widgets/Print/PrintViewModel",
     "esri/tasks/support/PrintTemplate",
+    "esri/tasks/support/Query",
     "dojo/domReady!"
 ], function(
     Map, TileLayer, MapView, Graphic, GraphicsLayer, RouteTask, RouteParameters,
-    FeatureSet, urlUtils, on, Search, Locator, FeatureLayer, Print, PrintVM, PrintTemplate
+    FeatureSet, urlUtils, on, Search, Locator, FeatureLayer, Print, PrintVM, PrintTemplate, Query
 ) {
     ///////////////////////////
     // DEFINICIONES Y CONSTANTES
@@ -242,8 +243,50 @@ require([
 
     // Carga las paradas desde el feature server
     function loadStops(){
-        // TODO
-        alert("Falta hacer");
+        var query = new Query();
+        query.where = "event_type = '17'";
+        query.returnGeometry = true;
+        stopsFLyr.queryFeatures(query)
+        .then((featureSet) => {
+            console.log(featureSet);
+            if(featureSet.features.length < 1){
+                alert("No hay paradas guardadas.");
+                return;
+            }
+
+            featureSet.features.forEach(feature => {
+                var stop = {
+                    name: feature.attributes.description,
+                    geometry: feature.geometry,
+                    symbol: stopMarker,
+                    graphic: new Graphic({
+                        geometry: feature.geometry, 
+                        symbol: stopMarker, 
+                        // Atributos para el servidor de eventos
+                        attributes: {
+                            event_type: "17", 
+                            description: feature.attributes.description
+                        }
+                    })
+                };
+
+                addStop(stop);
+            });
+
+            // if (results.features.length>0) {
+            //     for (var i = 0; i < results.features.length; i++) { 
+            //         var loadedStop = {
+            //             name: results.features[i].attributes.description,
+            //             geometry: results.features[i].geometry
+                    
+            //         }
+            //         console.log(results.features[i].attributes.description );
+            //     }
+            // }
+        })
+        .catch(err => {
+            alert("Ocurrió un error cargando las paradas");
+        });
     }
 
     // Guarda la ruta en el feature server
@@ -316,7 +359,9 @@ require([
         }
     }
 
+    // Ejecuta el servicio Print para generar el PDF y luego se descarga
     function downloadPDF(){
+        // TODO
         printWidget.viewModel.print(new PrintTemplate({
             format: "pdf",
             layout: "a4-landscape",
@@ -340,6 +385,31 @@ require([
         .catch(err => {
             alert("Hubo un error al crear el PDF.");
             console.log(err);
+        });
+    }
+
+    // Borra todas las features de una feature layer
+    function clearFeatureLayer(fLyr){
+        fLyr.queryObjectIds()
+        .then(objectIds => {
+            console.log(objectIds);
+            var to_delete = [];
+            objectIds.forEach(oId => {
+                to_delete.push({objectId: oId});
+            });
+            console.log(to_delete);
+            fLyr.applyEdits({
+                deleteFeatures: to_delete
+            })
+            .then(() => {
+                alert("Feature Layer borrada exitosamente.");
+            })
+            .catch(err => {
+                alert("Ocurrió un error limpiando la feature layer.");
+            });
+        })
+        .catch(err => {
+            alert("Ocurrió un error limpiando la feature layer.");
         });
     }
 
@@ -367,6 +437,9 @@ require([
         });
         $("#btnDownloadPDF").click(() => {
             downloadPDF();
+        });
+        $("#btnClearEventLayer").click(() => {
+            clearFeatureLayer(stopsFLyr);
         });
         $('.sidebarCollapse').on('click', function () {
             if($("#sidebar").hasClass("active")){
