@@ -18,12 +18,13 @@ require([
     "esri/tasks/support/Query",
     "esri/tasks/GeometryService",
     "esri/tasks/support/DensifyParameters",
-    "esri/config",
+    "esri/tasks/QueryTask",
+    "esri/tasks/support/BufferParameters",
     "dojo/domReady!"
 ], function(
     Map, TileLayer, MapView, Graphic, GraphicsLayer, RouteTask, RouteParameters,
     FeatureSet, urlUtils, on, Search, Locator, FeatureLayer, Print, PrintVM, PrintTemplate, Query, GeometryService,
-    DensifyParameters, esriConfig
+    DensifyParameters, QueryTask, BufferParameters
 ) {
     ///////////////////////////
     // DEFINICIONES Y CONSTANTES
@@ -49,6 +50,14 @@ require([
         url: "assets/car.png",
         width: "40px",
         height: "40px"
+    };
+    var bufferSymbol = {
+        type: "simple-fill",
+        color: [140, 140, 222, 0.5],
+        outline: {
+            color: [0, 0, 0, 0.5],
+            width: 2
+        }
     };
     var simulating = false;
 
@@ -120,6 +129,10 @@ require([
 
     // Se define el servicio para operaciones espaciales
     var geometrySvc = new GeometryService({url: "https://sampleserver6.arcgisonline.com/arcgis/rest/services/Utilities/Geometry/GeometryServer"});
+
+    // Se definen las QueryTasks para consultar por los condados y estados
+    var conuntiesQueryTask = new QueryTask("http://services.arcgisonline.com/ArcGIS/rest/services/Demographics/USA_1990-2000_Population_Change/MapServer/3");
+    var statesQueryTask = new QueryTask("http://services.arcgisonline.com/ArcGIS/rest/services/Demographics/USA_1990-2000_Population_Change/MapServer/4");
 
     // Init Eventos Javascript
     initDocument();
@@ -476,14 +489,16 @@ require([
             // Busca la coordenada, crea el marcador y lo agrega a la capa del móvil.
             var next_coordinate = simulation.coordinates[simulation.iteration];
             var new_marker = createSimulationMarker(next_coordinate[0], next_coordinate[1]);
-            mobileLyr.removeAll();
-            mobileLyr.add(new_marker);
+            //mobileLyr.add(new_marker);
 
             // Calculo el buffer y lo agrego a la capa del móvil.
-            
+            getBuffer(new_marker).then(buffer => {
+                mobileLyr.removeAll();
+                mobileLyr.addMany([new_marker, buffer]);
 
-            simulation.iteration++;
-            setTimeout(updateSimulation, simulation.velocity, simulation);
+                simulation.iteration++;
+                setTimeout(updateSimulation, simulation.velocity, simulation);
+            });
         }
     }
 
@@ -552,6 +567,49 @@ require([
         .catch(err => {
             alert("Ocurrió un error limpiando la feature layer.");
         });
+    }
+
+    function getBuffer(marker){
+        if(simulating){
+            var bufferParams = new BufferParameters({
+                geometries: [marker.geometry],
+                distances: [1],
+                unit: "kilometers",
+                geodesic: true
+            });
+            return geometrySvc.buffer(bufferParams)
+            .then(buffer => {
+                return new Graphic({
+                    geometry: buffer[0],
+                    symbol: bufferSymbol
+                });
+            })
+            .catch(err => {
+                alert("Error calculando el buffer.");
+                console.log("Buffer: ", err)
+            });
+        }else{
+            alert("No hay simulación en progreso");
+        }
+    }
+
+    // Se consulta por los condados en cierto buffer
+    function queryCounty(){
+        if(simulating){
+
+        }else{
+            alert("No hay simulación en progreso");
+        }
+    }
+
+    // Se consulta por los estados en cierto buffer
+    function queryCounty(){
+        // TODO
+        if(simulating){
+
+        }else{
+            alert("No hay simulación en progreso");
+        }
     }
 
     ///////////////////////////
