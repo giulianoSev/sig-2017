@@ -91,7 +91,7 @@ require([
             token = arcgis_token;
         },
         error: () => {
-            alert("Error al obtener el token.");
+            showToast("Error al obtener el token", "error");
         }
     });
 
@@ -301,7 +301,7 @@ require([
         });
 
         if(routeParams.stops.features.length < 2){
-            alert("Tiene que haber 2 o más paradas.");
+            showToast("Tiene que haber 2 o más paradas", "error");
             return;
         }
 
@@ -318,9 +318,10 @@ require([
 
             current_route = routeResult;
             enableRouteButtons();
+            showToast("Ruta calculada con éxito", "info");
         })
         .catch(() => {
-            alert("Ocurrió un error al calcular la ruta");
+            showToast("Ocurrió un error al calcular la ruta", "error");
         })
         .then(() => hideSpinner());
     }
@@ -336,11 +337,11 @@ require([
             addFeatures: adds
         })
         .then(() => {
-            showToast("Paradas guardadas!");
-            //alert("Guardado!");
+            showToast("Paradas guardadas!", "info");
         })
-        .catch(() => {
-            alert("Error!");
+        .catch(err => {
+            console.log("Save Stops: ", err);
+            showToast("Ocurrió un error guardando las paradas", "error");
         })
         .then(() => hideSpinner());
     }
@@ -357,7 +358,7 @@ require([
         .then((featureSet) => {
             console.log(featureSet);
             if(featureSet.features.length < 1){
-                alert("No hay paradas guardadas.");
+                showToast("No hay paradas guardadas", "error");
                 return;
             }
 
@@ -378,10 +379,12 @@ require([
                 };
 
                 addStop(stop);
+                showToast("Paradas cargadas con éxito", "info");
             });
         })
         .catch(err => {
-            alert("Ocurrió un error cargando las paradas");
+            console.log(err);
+            showToast("Ocurrió un error cargando las paradas", "error");
         })
         .then(() => hideSpinner());
     }
@@ -395,7 +398,7 @@ require([
                 return;
             }
             if(isNullOrWhitespace(name) || !isAlphanumeric(name)){
-                alert(`"${name}" es un nombre inválido para la ruta.`);
+                showToast(`"${name}" es un nombre inválido para la ruta.`, "error");
                 return;
             }
             var route_graphic = new Graphic({
@@ -412,15 +415,15 @@ require([
                 addFeatures: [route_graphic]
             })
             .then(() => {
-                showToast("Ruta guardada!");
-                //alert("Ruta guardada!");
+                showToast("Ruta guardada!", "info");
             })
-            .catch(() => {
-                alert("Error al guardar ruta.");
+            .catch(err => {
+                console.log("Save Route: ", err);
+                showToast("Error al guardar ruta", "error");
             })
             .then(() => hideSpinner());
         }else{
-            alert("Debe haber una ruta cargada para guardar.");
+            showToast("Debe haber una ruta cargada para guardar", "error");
         }
     }
 
@@ -431,7 +434,7 @@ require([
             return;
         }
         if(isNullOrWhitespace(name) || !isAlphanumeric(name)){
-            alert(`"${name}" es un nombre inválido para la ruta.`);
+            showToast(`"${name}" es un nombre inválido para la ruta.`, "error");
             return;
         }
 
@@ -452,10 +455,11 @@ require([
 
             current_route = routeResult;
             enableRouteButtons();
+            showToast("Ruta cargada con éxito", "info");
         })
         .catch (err => {
-            alert(`Error al cargar la ruta ${name}`);
-            console.log(err);
+            console.log("Load Route: ", err);
+            showToast(`Error al cargar la ruta ${name}`, "error");
         })
         .then(() => hideSpinner());
     }
@@ -464,7 +468,7 @@ require([
     function startSimulation(){
         if(current_route){
             if(simulating){
-                alert("Hay una simulación en curso.");
+                showToast("Hay una simulación en curso.", "error");
                 return;
             }
             simulating = true;
@@ -484,7 +488,7 @@ require([
             simulation.coordinates = path;
             updateSimulation(simulation);
         }else{
-            alert("Primero debe indicarse una ruta.");
+            showToast("Primero debe indicarse una ruta.", "error");
             return;
         }
     }
@@ -495,10 +499,9 @@ require([
             simulating = false;
             chgSimBtn();
 
-            showToast("Simulación finalizada!");
-            //alert("Simulación finalizada");
+            showToast("Simulación finalizada!", "info");
         }else{
-            alert("No hay una simulación en curso.")
+            showToast("No hay una simulación en curso", "error");
         }
     }
 
@@ -648,8 +651,8 @@ require([
             window.open(data.url);
         })
         .catch(err => {
-            alert("Hubo un error al crear el PDF.");
-            console.log(err);
+            console.log("Print PDF: ", err);
+            showToast("Hubo un error al crear el PDF", "error");
         });
     }
 
@@ -669,14 +672,16 @@ require([
                 deleteFeatures: to_delete
             })
             .then(() => {
-                alert("Feature Layer borrada exitosamente.");
+                showToast("Feature Layer borrada exitosamente", "info");
             })
             .catch(err => {
-                alert("Ocurrió un error limpiando la feature layer.");
+                console.log("Clear Feature Layer: ", err);
+                showToast("Feature Layer borrada exitosamente", "info");
             });
         })
         .catch(err => {
-            alert("Ocurrió un error limpiando la feature layer.");
+            console.log("Clear Feature Layer: ", err);
+            showToast("Ocurrió un error limpiando la feature layer", "error");
         })
         .then(() => hideSpinner());
     }
@@ -698,11 +703,11 @@ require([
                 });
             })
             .catch(err => {
-                alert("Error calculando el buffer.");
                 console.log("Buffer: ", err)
+                showToast("Error calculando el buffer", "error");
             });
         }else{
-            alert("No hay simulación en progreso");
+            showToast("No hay simulación en progreso", "error");
         }
     }
 
@@ -739,10 +744,10 @@ require([
             })
             .catch(err => {
                 console.log("County Query Task: ", err);
-                alert("Error obteniendo los condados.");
+                showToast("Error obteniendo los condados", "error");
             });
         }else{
-            alert("No hay simulación en progreso");
+            showToast("No hay simulación en progreso", "error");
         }
     }
 
@@ -777,10 +782,10 @@ require([
             })
             .catch(err => {
                 console.log("State Query Task: ", err);
-                alert("Error consultando estados");
+                showToast("Error consultando estados", "error");
             });
         }else{
-            alert("No hay simulación en progreso");
+            showToast("No hay simulación en progreso", "error");
         }
     }
 
@@ -963,13 +968,21 @@ require([
         $("#spinner").hide(200);
     }
 
-    function showToast(msg){
+    function showToast(msg, type){
+        $("#toast").removeClass();
+        
+        if(type == "error"){
+            $("#toast").addClass("btn btn-danger");
+        }else if(type == "info"){
+            $("#toast").addClass("btn btn-success");
+        }
+
         $("#toast").html(msg);
         $("#toast").show(500);
-        setTimeout(hideAlert, 5000);
+        setTimeout(hideToast, 5000);
     }
 
-    function hideAlert(){
+    function hideToast(){
         $("#toast").hide(500);
     }
 
