@@ -106,6 +106,10 @@ require([
     });
 
     
+    // Se deja definida la capa de paradas 
+    var stopsLyr = new GraphicsLayer();
+    map.layers.add(stopsLyr);
+
     // Se deja definida la capa de rutas
     var routeLyr = new GraphicsLayer();
     map.layers.add(routeLyr);
@@ -187,7 +191,8 @@ require([
             symbol: stopMarker,
             graphic: new Graphic({
                 geometry: result.result.feature.geometry, 
-                symbol: stopMarker, 
+                symbol: stopMarker,
+                spatialReference: { wkid: 102100 }, 
                 // Atributos para el servidor de eventos
                 attributes: {
                     event_type: "17", 
@@ -209,7 +214,10 @@ require([
         stop.id = stops.length + 1;
 
         // Agrega al mapa
-        view.graphics.addMany([stop.graphic]);
+        // view.graphics.addMany([stop.graphic]);
+
+        // Agrega a la capa de paradas
+        stopsLyr.add(stop.graphic);
 
         stops.push(stop);
 
@@ -222,7 +230,10 @@ require([
         var stop = _.find(stops, s => s.id == stopId);
         stops = _.without(stops, stop);
 
-        view.graphics.remove(stop.graphic);
+        // view.graphics.remove(stop.graphic);
+
+        // Quito stop de la capa de paradas
+        stopsLyr.remove(stop.graphic)
         updateStopsIds();
 
         // Quito la ruta 
@@ -355,7 +366,8 @@ require([
                     symbol: stopMarker,
                     graphic: new Graphic({
                         geometry: feature.geometry, 
-                        symbol: stopMarker, 
+                        symbol: stopMarker,
+                        spatialReference: { wkid: 102100 }, 
                         // Atributos para el servidor de eventos
                         attributes: {
                             event_type: "17", 
