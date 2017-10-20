@@ -200,11 +200,7 @@ require([
         stops = _.without(stops, stop);
 
         view.graphics.remove(stop.graphic);
-        for(var i = 0; i < stops.length; i++){
-            if(stops[i].id != i){
-                stops[i].id = i;
-            }
-        }
+        updateStopsIds();
 
         // Quito la ruta 
         routeLyr.removeAll();
@@ -260,7 +256,7 @@ require([
     // Asigna el id de las paradas segun su posicion
     function updateStopsIds(){
         for(var i = 0; i < stops.length; i++){
-            stops[i].id = i;
+            stops[i].id = i+1;
         }
         updateStopsList();
     }
