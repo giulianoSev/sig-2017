@@ -20,11 +20,12 @@ require([
     "esri/tasks/support/DensifyParameters",
     "esri/tasks/QueryTask",
     "esri/tasks/support/BufferParameters",
+    "esri/geometry/geometryEngine",
     "dojo/domReady!"
 ], function(
     Map, TileLayer, MapView, Graphic, GraphicsLayer, RouteTask, RouteParameters,
     FeatureSet, urlUtils, on, Search, Locator, FeatureLayer, Print, PrintVM, PrintTemplate, Query, GeometryService,
-    DensifyParameters, QueryTask, BufferParameters
+    DensifyParameters, QueryTask, BufferParameters, geometryEngine
 ) {
     ///////////////////////////
     // DEFINICIONES Y CONSTANTES
@@ -453,18 +454,17 @@ require([
             
             var simulation = {
                 iteration: 0,
-                buffer_size: 3, // 3km
+                buffer_size: 30, // 3km
                 segment_length: 100, // 100m
                 velocity: 100, // 100m ~ 100ms => 360.000 km/h
                 coordinates: null
             }
 
-            getDensify(simulation)
-            .then(path => {
-                simulation.coordinates = path;
-                updateSimulation(simulation);
-            });
-            
+            // Se obtiene la ruta como una serie de puntos equidistantes
+            // Se utiliza Geometry Engine para que sea más rápido (podría usarse el Geometry Service)
+            var path = geometryEngine.densify(current_route.geometry, simulation.segment_length, "meters").paths[0];
+            simulation.coordinates = path;
+            updateSimulation(simulation);
         }else{
             alert("Primero debe indicarse una ruta.");
             return;
@@ -497,25 +497,100 @@ require([
 
             // Calculo el buffer y lo agrego a la capa con el móvil.
             getBuffer(new_marker, simulation).then(buffer => {
-                var counties = queryCounty(buffer, simulation);
-                var states = queryState(buffer, simulation);
+                if(simulating){
+                    var counties = queryCounty(buffer, simulation);
+                    var states = queryState(buffer, simulation);
 
-                // Cuando terminen las queries se renderizan
-                Promise.all([counties, states])
-                .then(results => {
-                    var graphics = _.union(results[0], results[1]);
-                    graphics.push(new_marker);
-                    graphics.push(buffer);
+                    // Cuando terminen las queries se renderizan
+                    Promise.all([counties, states])
+                    .then(results => {
+                        if(simulating){
+                            var graphics = [];
+                            var content = "";
+                            if(results[1]){
+                                content += `
+                                    <b>Estados intersectados: </b><br/>
+                                    <ul>
+                                `;
+                                results[1].forEach(state => {
+                                    graphics.push(state.graphic);
+                                    content += `
+                                        <li>${state.name}, ${state.st_abbrev}</li>
+                                    `;
+                                });
+                                content += `
+                                    </ul>
+                                `;
+                            }
+                            if(results[0]){
+                                content += `
+                                    <b>Condados intersectados: </b><br/>
+                                    <ul>
+                                `;
+                                var total_local_population = 0;
+                                var total_county_population = 0;
+                                results[0].forEach(county => {
+                                    graphics.push(county.graphic);
+                                    var local_population = getLocalPopulation(buffer, county);
+                                    total_local_population += local_population;
+                                    total_county_population += county.total_population;
+                                    var population_percentage = Math.round((local_population / county.total_population) * 100); 
+                                    content += `
+                                        <li>${county.name}, ${county.st_abbrev} - ${local_population}/${county.total_population} (%${population_percentage})</li>
+                                    `;
+                                });
+                                var population_percentage = Math.round((total_local_population / total_county_population) * 100); 
+                                content += `
+                                    </ul>
+                                    <b>Población total en el buffer: ${total_local_population} (%${population_percentage})</b>
+                                `;
+                            }
 
-                    mobileLyr.removeAll();
-                    mobileLyr.addMany(graphics);
 
-                    simulation.iteration++;
-                    setTimeout(updateSimulation, simulation.velocity, simulation);
-                });
+                            graphics.push(new_marker);
+                            graphics.push(buffer);
+
+                            mobileLyr.removeAll();
+                            mobileLyr.addMany(graphics);
+
+                            // Actualizo el popup
+                            view.popup.open({
+                                title: "Información de la simulación",
+                                content: content,
+                                dockEnabled: true,
+                                dockOptions: {
+                                    breakpoint: false,
+                                    buttonEnabled: false,
+                                    position: "top-right"
+                                }
+                            });
+
+                            simulation.iteration++;
+                            setTimeout(updateSimulation, simulation.velocity, simulation);
+                        }
+                    });
+                }
             });
         }
     }
+
+    // Obtiene la cantidad de población dentro del buffer
+    function getLocalPopulation(buffer, county){
+        // Paso el área del condado a metro^2
+        var land_area = county.land_area * 2.58999;
+
+        // Obtengo el área de intersección (con geometry engine porque es más rápido) (podría usarse el Geometry Service)
+        var intersect_area = geometryEngine.geodesicArea(
+            geometryEngine.intersect(buffer.geometry, county.graphic.geometry), 
+            "square-kilometers"
+        );
+        
+        // Obtengo el porcentaje de área ocupada
+        var cover_percentage = intersect_area / land_area;
+
+        // Obtengo la poblacion dentro del buffer
+        return Math.round(county.total_population * cover_percentage);
+    }   
 
     // Crea el marcador del móvil
     function createSimulationMarker(lng, lat){
@@ -584,28 +659,6 @@ require([
         });
     }
 
-    // Obtiene los puntos equidistantes que conforman la ruta actual
-    function getDensify(simulation){
-        if(simulating){
-            var densifyParams = new DensifyParameters({
-                geometries: [current_route.geometry],
-                lengthUnit: "meters",
-                maxSegmentLength: simulation.segment_length,
-                geodesic: true
-            });
-            return geometrySvc.densify(densifyParams)
-            .then(data => {
-                return data[0].paths[0];
-            })
-            .catch(err => {
-                alert("Error al calcular los puntos de ruta");
-                console.log("Densify: ", err);
-            });
-        }else{
-            alert("No hay simulación en progreso");
-        }
-    }
-
     // Obtiene el buffer mediante una consulta al Geometry Service
     function getBuffer(marker, simulation){
         if(simulating){
@@ -650,8 +703,14 @@ require([
                 var counties = [];
                 data.features.forEach(feature => {
                     counties.push({
-                        geometry: feature.geometry,
-                        symbol: countySymbol
+                        name: feature.attributes.NAME, 
+                        total_population: feature.attributes.TOTPOP_CY,
+                        land_area: feature.attributes.LANDAREA,
+                        st_abbrev: feature.attributes.ST_ABBREV,
+                        graphic: new Graphic({
+                            geometry: feature.geometry,
+                            symbol: countySymbol
+                        })
                     });
                 })
                 return counties;
@@ -684,8 +743,12 @@ require([
                 var states = [];
                 data.features.forEach(feature => {
                     states.push({
-                        geometry: feature.geometry,
-                        symbol: stateSymbol
+                        name: feature.attributes.NAME,
+                        st_abbrev: feature.attributes.ST_ABBREV,
+                        graphic: new Graphic({
+                            geometry: feature.geometry,
+                            symbol: stateSymbol
+                        })
                     });
                 })
                 return states;
