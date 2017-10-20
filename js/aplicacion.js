@@ -301,6 +301,7 @@ require([
             return;
         }
 
+        showSpinner();
         (new RouteTask({
             url: `https://route.arcgis.com/arcgis/rest/services/World/Route/NAServer/Route_World?token=${token.access_token}`
         }))
@@ -312,10 +313,12 @@ require([
             routeLyr.add(routeResult);
 
             current_route = routeResult;
+            enableRouteButtons();
         })
         .catch(() => {
             alert("Ocurrió un error al calcular la ruta");
         })
+        .then(() => hideSpinner());
     }
 
     // Guarda las paradas en el feature server
@@ -324,6 +327,7 @@ require([
         stops.forEach(stop => {
             adds.push(stop.graphic);
         });
+        showSpinner();
         stopsFLyr.applyEdits({
             addFeatures: adds
         })
@@ -332,7 +336,8 @@ require([
         })
         .catch(() => {
             alert("Error!");
-        });
+        })
+        .then(() => hideSpinner());
     }
 
     // Carga las paradas desde el feature server
@@ -341,6 +346,8 @@ require([
         query.where = "event_type = '17'";
         query.returnGeometry = true;
         query.outSpatialReference = { wkid: 102100 };
+
+        showSpinner();
         stopsFLyr.queryFeatures(query)
         .then((featureSet) => {
             console.log(featureSet);
@@ -370,7 +377,8 @@ require([
         })
         .catch(err => {
             alert("Ocurrió un error cargando las paradas");
-        });
+        })
+        .then(() => hideSpinner());
     }
 
     // Guarda la ruta en el feature server
@@ -393,6 +401,8 @@ require([
                     notes: "sig_grupo7_" + name
                 }
             });
+
+            showSpinner();
             routesFLyr.applyEdits({
                 addFeatures: [route_graphic]
             })
@@ -401,7 +411,8 @@ require([
             })
             .catch(() => {
                 alert("Error al guardar ruta.");
-            });
+            })
+            .then(() => hideSpinner());
         }else{
             alert("Debe haber una ruta cargada para guardar.");
         }
@@ -423,10 +434,9 @@ require([
         query.returnGeometry = true;
         query.outSpatialReference = { wkid: 102100 };
         
+        showSpinner();
         routesFLyr.queryFeatures(query)
         .then(featureSet =>{
-            debugger;
-
             var routeResult = {
                 geometry: featureSet.features[0].geometry,
                 symbol: routeSymbol
@@ -435,11 +445,13 @@ require([
             routeLyr.add(routeResult);
 
             current_route = routeResult;
+            enableRouteButtons();
         })
         .catch (err => {
             alert(`Error al cargar la ruta ${name}`);
             console.log(err);
         })
+        .then(() => hideSpinner());
     }
 
     // Comienza la simulación
@@ -636,6 +648,8 @@ require([
 
     // Borra todas las features de una feature layer
     function clearFeatureLayer(fLyr){
+
+        showSpinner();
         fLyr.queryObjectIds()
         .then(objectIds => {
             console.log(objectIds);
@@ -656,7 +670,8 @@ require([
         })
         .catch(err => {
             alert("Ocurrió un error limpiando la feature layer.");
-        });
+        })
+        .then(() => hideSpinner());
     }
 
     // Obtiene el buffer mediante una consulta al Geometry Service
@@ -768,6 +783,17 @@ require([
 
     // Setea eventos javascript
     function initDocument(){
+        // Quito spinner
+        hideSpinner();
+
+
+        // Habilita botones de la página
+        $("#btnLoadStops").prop('disabled', false);
+        $("#btnLoadRoute").prop('disabled', false);
+        $("#btnClearEventLayer").prop('disabled', false);
+        $("#btnClearRouteLayer").prop('disabled', false);
+
+        // Evt click
         $("#btnSaveStops").click(() => {
             saveStops();
         });
@@ -904,6 +930,30 @@ require([
             $("#btnSimStatus").addClass("btn btn-success");
             $("#btnSimStatus").html(`<i class="fa fa-play"></i>`)
         }
+    }
+
+    // Habilita los botones cuando hay una ruta cargada
+    function enableRouteButtons(){
+        $("#btnSaveRoute").prop('disabled', false);
+        $("#btnSimStatus").prop('disabled', false);
+    }
+
+    // Habilita los botones mientras no haya simulación
+    function enableSimButtons(){
+
+    }
+
+    // Deshabilita los botones mientras haya simulación
+    function disableSimButtons(){
+        
+    }
+
+    function showSpinner(){
+        $("#spinner").show(200);
+    }
+
+    function hideSpinner(){
+        $("#spinner").hide(200);
     }
 
     ///////////////////////////
