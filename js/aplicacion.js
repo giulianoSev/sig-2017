@@ -214,6 +214,55 @@ require([
         updateStopsList();
     }
 
+    // Reordena las paradas
+    function updateStop(original_pos, new_pos){
+        var new_stops = [];
+        if(original_pos > new_pos){
+            // Sube de posicion
+            // Hasta new_pos son todos iguales
+            var i;
+            for(i = 0; i < new_pos-1; i++){
+                new_stops.push(stops[i]);
+            }
+            // Cuando llega a new_pos se mete el elemento que estaba en la original
+            new_stops.push(stops[original_pos-1]);
+
+            // Luego se meten todos los que venian menos el original
+            for(i; i < stops.length; i++){
+                if(i == original_pos-1)
+                    continue;
+                new_stops.push(stops[i]);
+            }
+        }else if(original_pos < new_pos){
+            // Baja de posicion
+            // Hasta new_pos son todos iguales salvo el original
+            var i;
+            for(i = 0; i < new_pos; i++){
+                if(i == original_pos-1)
+                    continue;
+                new_stops.push(stops[i]);
+            }
+            // Se mete el elemento original
+            new_stops.push(stops[original_pos-1]);
+
+            // Hasta el final se meten como estaban
+            for(i; i < stops.length; i++){
+                new_stops.push(stops[i]);
+            }
+        }
+
+        stops = new_stops;
+        updateStopsIds();
+    }
+
+    // Asigna el id de las paradas segun su posicion
+    function updateStopsIds(){
+        for(var i = 0; i < stops.length; i++){
+            stops[i].id = i;
+        }
+        updateStopsList();
+    }
+
     // Resuleve la ruta
     function solveRoute(){
         var routeParams = new RouteParameters({
@@ -432,6 +481,9 @@ require([
             mobileLyr.removeAll();
             mobileLyr.add(new_marker);
 
+            // Calculo el buffer y lo agrego a la capa del móvil.
+            
+
             simulation.iteration++;
             setTimeout(updateSimulation, simulation.velocity, simulation);
         }
@@ -537,6 +589,15 @@ require([
         });
         $("#btnClearRouteLayer").click(() => {
             clearFeatureLayer(routesFLyr);
+        });
+        $("#stopList").sortable({
+            items: "li",
+            start: function(event, ui) {
+                ui.item.startPos = ui.item.index();
+            },
+            stop: function(event, ui) {
+                updateStop(ui.item.startPos, ui.item.index());
+            }
         });
         $('.sidebarCollapse').on('click', function () {
             if($("#sidebar").hasClass("active")){
