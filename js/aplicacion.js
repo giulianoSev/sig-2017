@@ -20,11 +20,15 @@ require([
     "esri/tasks/support/DensifyParameters",
     "esri/tasks/QueryTask",
     "esri/tasks/support/BufferParameters",
+    "esri/tasks/PrintTask",
+    "esri/tasks/support/PrintParameters",
+    "esri/tasks/support/PrintTemplate",
+    "esri/tasks/support/LegendLayer",
     "dojo/domReady!"
 ], function(
     Map, TileLayer, MapView, Graphic, GraphicsLayer, RouteTask, RouteParameters,
     FeatureSet, urlUtils, on, Search, Locator, FeatureLayer, Print, PrintVM, PrintTemplate, Query, GeometryService,
-    DensifyParameters, QueryTask, BufferParameters
+    DensifyParameters, QueryTask, BufferParameters, PrintTask, PrintParameters, PrintTemplate, LegendLayer
 ) {
     ///////////////////////////
     // DEFINICIONES Y CONSTANTES
@@ -107,13 +111,31 @@ require([
 
     
     // Se deja definida la capa de paradas 
-    var stopsLyr = new GraphicsLayer();
+    var stopsLyr = new GraphicsLayer({
+        title: "Paradas",
+        id: "stopsLyr"
+    });
     map.layers.add(stopsLyr);
 
+    // var legendStopsLyr = new LegendLayer({
+    //     layerId: "stopsLyr",
+    //     subLayerIds: [],
+    //     title: "Paradas"
+    // })
+
     // Se deja definida la capa de rutas
-    var routeLyr = new GraphicsLayer();
+    var routeLyr = new GraphicsLayer({
+        title: "Ruta",
+        id: "routeLyr"
+    });
     map.layers.add(routeLyr);
     var current_route = null;
+
+    // var legendRouteLyr = new LegendLayer({
+    //     leyerId: "routeLyr",
+    //     subLayerIds: [],
+    //     title: "Ruta"
+    // })
 
     // Se deja definida la capa del móvil
     var mobileLyr = new GraphicsLayer();
@@ -170,11 +192,28 @@ require([
 
 
     // EXPORTAR A PDF
-    var printWidget = new Print({
-        viewModel: new PrintVM({
-            view: view,
-            url: "https://sampleserver6.arcgisonline.com/arcgis/rest/services/Utilities/PrintingTools/GPServer/Export%20Web%20Map%20Task"
+    // Se crea la PrintTask
+    var printTask = new PrintTask({
+        url: "https://sampleserver6.arcgisonline.com/arcgis/rest/services/Utilities/PrintingTools/GPServer/Export%20Web%20Map%20Task",
+    });
+
+    // Seteo los parámetros de impresión
+    var printParams = new PrintParameters ({
+        spatialReference: { wkid: 102100 },
+        template: new PrintTemplate ({
+            exportOptions: {
+                width: 500,
+                height: 400,
+                dpi: 96},
+            layoutOptions: {
+                titleText: "La solución contundente a su problema de ruteo",
+                authorText: "Grupo 7",
+                copyrightText: "SIG",},
+                // legendLayers: [legendRouteLyr, legendStopsLyr]},
+            format: "pdf",
+            layout: "a4-landscape",
         }),
+        view: view
     });
 
 
@@ -544,31 +583,13 @@ require([
 
     // Ejecuta el servicio Print para generar el PDF y luego se descarga
     function downloadPDF(){
-        // TODO
-        printWidget.viewModel.print(new PrintTemplate({
-            format: "pdf",
-            layout: "a4-landscape",
-            layoutOptions: {
-                titleText: "SIG - Obligatorio 2",
-                authorText: "Grupo 7",
-                copyrightText: "SIG - Grupo 7",
-                scalebarUnit: "Kilometers",
-                legendLayers: [],
-                customTextElements: []
-            },
-            exportOptions: {
-                width: 500,
-                height: 400
-            }
-        }))
-        .then(data => {
-            console.log("URL: ", data);
-            window.open(data.url);
+        printTask.execute(printParams)
+        .then(result => {
+            window.open(result.url, "_blank");
         })
         .catch(err => {
             alert("Hubo un error al crear el PDF.");
-            console.log(err);
-        });
+        })
     }
 
     // Borra todas las features de una feature layer
