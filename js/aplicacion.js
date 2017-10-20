@@ -440,26 +440,21 @@ require([
             }
             simulating = true;
             chgSimBtn();
+            
+            var simulation = {
+                iteration: 0,
+                buffer_size: 3, // 3km
+                segment_length: 30, // 30m
+                velocity: 100, // 30m ~ 100ms => 1080 km/h
+                coordinates: null
+            }
 
-            // Convierto la ruta en series de puntos equidistantes
-            var densifyParams = new DensifyParameters();
-            densifyParams.geodesic = true;
-            densifyParams.lengthUnit = "meters";
-            densifyParams.maxSegmentLength = 30;
-            densifyParams.geometries = [current_route.geometry];
-            geometrySvc.densify(densifyParams)
-            .then(data => {
-                var simulation = {
-                    iteration: 0,
-                    velocity: 100, // 30m ~ 100ms => 1080 km/h
-                    coordinates: data[0].paths[0]
-                }
+            getDensify(simulation)
+            .then(path => {
+                simulation.coordinates = path;
                 updateSimulation(simulation);
-            })
-            .catch(err => {
-                alert("Error al calcular los puntos de ruta");
-                console.log("Densify: ", err);
             });
+            
         }else{
             alert("Primero debe indicarse una ruta.");
             return;
@@ -486,13 +481,12 @@ require([
                 stopSimulation();
             }
 
-            // Busca la coordenada, crea el marcador y lo agrega a la capa del móvil.
+            // Busca la coordenada, crea el marcador.
             var next_coordinate = simulation.coordinates[simulation.iteration];
             var new_marker = createSimulationMarker(next_coordinate[0], next_coordinate[1]);
-            //mobileLyr.add(new_marker);
 
-            // Calculo el buffer y lo agrego a la capa del móvil.
-            getBuffer(new_marker).then(buffer => {
+            // Calculo el buffer y lo agrego a la capa con el móvil.
+            getBuffer(new_marker, simulation).then(buffer => {
                 mobileLyr.removeAll();
                 mobileLyr.addMany([new_marker, buffer]);
 
@@ -569,11 +563,34 @@ require([
         });
     }
 
-    function getBuffer(marker){
+    // Obtiene los puntos equidistantes que conforman la ruta actual
+    function getDensify(simulation){
+        if(simulating){
+            var densifyParams = new DensifyParameters({
+                geometries: [current_route.geometry],
+                lengthUnit: "meters",
+                maxSegmentLength: simulation.segment_length,
+                geodesic: true
+            });
+            return geometrySvc.densify(densifyParams)
+            .then(data => {
+                return data[0].paths[0];
+            })
+            .catch(err => {
+                alert("Error al calcular los puntos de ruta");
+                console.log("Densify: ", err);
+            });
+        }else[
+
+        ]
+    }
+
+    // Obtiene el buffer mediante una consulta al Geometry Service
+    function getBuffer(marker, simulation){
         if(simulating){
             var bufferParams = new BufferParameters({
                 geometries: [marker.geometry],
-                distances: [1],
+                distances: [simulation.buffer_size],
                 unit: "kilometers",
                 geodesic: true
             });
