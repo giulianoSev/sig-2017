@@ -526,6 +526,7 @@ require([
                 buffer_size: 30, // 3km
                 segment_length: 100, // 100m
                 velocity: 100, // 100m ~ 100ms => 360.000 km/h
+                travelled_length: 0, // km
                 coordinates: null
             }
 
@@ -614,9 +615,12 @@ require([
                                     `;
                                 });
                                 var population_percentage = Math.round((total_local_population / total_county_population) * 100); 
+                                var travelled_km = Math.round(simulation.travelled_length / 1000);
                                 content += `
                                     </ul>
                                     <b>Población total en el buffer: ${total_local_population} (%${population_percentage})</b>
+                                    <hr/>
+                                    <b>Distancia recorrida: ${travelled_km}km</b>
                                 `;
                             }
 
@@ -640,6 +644,7 @@ require([
                             });
 
                             simulation.iteration++;
+                            simulation.travelled_length += simulation.segment_length;
                             setTimeout(updateSimulation, simulation.velocity, simulation);
                         }
                     });
