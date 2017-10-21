@@ -691,8 +691,9 @@ require([
             window.open(result.url, "_blank");
         })
         .catch(err => {
-            alert("Hubo un error al crear el PDF.");
-        })
+            console.log("Print PDF: ", err);
+            showToast("Hubo un error al crear el PDF", "error");
+        });
     }
 
     // Borra todas las features de una feature layer
@@ -760,7 +761,7 @@ require([
                 // NAME: Nombre
                 // TOTPOP_CY: Poblacion total
                 // LANDAREA: Área total en millas^2
-                // ST_ABBREV: Estado actual abreviado
+                // ST_ABBREV: Nombre del condado abreviado
                 outFields: ["NAME","TOTPOP_CY","LANDAREA", "ST_ABBREV"],
                 outSpatialReference: { wkid: 102100 },
                 returnGeometry: true
@@ -798,7 +799,7 @@ require([
                 spatialRelationship: "intersects",
                 // Atributos a devolver
                 // NAME: Nombre
-                // ST_ABBREV: Estado actual abreviado
+                // ST_ABBREV: Nombre del estado abreviado
                 outFields: ["NAME", "ST_ABBREV"],
                 outSpatialReference: { wkid: 102100 },
                 returnGeometry: true
@@ -841,6 +842,7 @@ require([
         // Habilita botones de la página
         $("#btnLoadStops").prop('disabled', false);
         $("#btnLoadRoute").prop('disabled', false);
+        $("#btnDownloadPDF").prop('disabled', false);
         $("#btnClearEventLayer").prop('disabled', false);
         $("#btnClearRouteLayer").prop('disabled', false);
 
@@ -899,10 +901,11 @@ require([
         $("#stopList").append(`
             <li id="stopListItem${stop.id}">
                 <a href="#">
-                    ${stop.name} 
+                    <i class="fa fa-bars"></i>
                     <span class="float-right">
                         <button type="button" class="btn btn-sm btn-outline-danger" style="cursor: pointer; display: none" title="Borrar parada">&#10006;</button>
                     </span>
+                    ${stop.name} 
                 </a>
             </li>`);
         $(`#stopListItem${stop.id}`).hover(
@@ -995,6 +998,9 @@ require([
         $("#btnLoadRoute").prop('disabled', false);
         $("#btnLoadStops").prop('disabled', false);
         $("#btnSolveRoute").prop('disabled', false);
+        $("#btnDownloadPDF").prop('disabled', false);
+        $("#btnClearEventLayer").prop('disabled', false);
+        $("#btnClearRouteLayer").prop('disabled', false);
     }
 
     // Deshabilita los botones mientras haya simulación
@@ -1003,6 +1009,9 @@ require([
         $("#btnLoadRoute").prop('disabled', true);
         $("#btnLoadStops").prop('disabled', true);
         $("#btnSolveRoute").prop('disabled', true);
+        $("#btnDownloadPDF").prop('disabled', true);
+        $("#btnClearEventLayer").prop('disabled', true);
+        $("#btnClearRouteLayer").prop('disabled', true);
     }
 
     // Muestra el spinner

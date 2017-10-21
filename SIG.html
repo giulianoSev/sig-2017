@@ -3,34 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="initial-scale=1,maximum-scale=1,user-scalable=no">
-  <title>Grupo 7 - Tarea 2</title>
-
-  <style>
-    html,
-    body,
-    #viewDiv {
-      padding: 0;
-      margin: 0;
-      height: 100%;
-      width: 100%;
-    }
-
-    #btnOpen{
-      z-index: 300;
-      position: absolute;
-      top: 50%;
-      left: 10px;
-      display: none;
-    }    
-
-    #toast{
-        position: absolute;
-        top: 85%;
-        left: 50%;
-        z-index: 100;
-    }
-
-  </style>
+  <title>SIG - Grupo 7 - Tarea 2</title>
 
   <link rel="stylesheet" href="https://js.arcgis.com/4.5/esri/css/main.css">
   <link rel="stylesheet" href="css/bootstrap4.min.css">
@@ -46,9 +19,9 @@
 
 <body>
   <div id="spinner" class="loading">Loading&#8230;</div>
-  <div id="toast" class="btn btn-success" style="display:none">ALERTA</div>
+  <div id="toast" class="btn btn-success" style="display:none"></div>
   <div class="wrapper">
-    <!-- Sidebar Holder -->
+
     <nav id="sidebar">
         <span class="sidebarCollapse float-right" style="cursor: pointer">&#10006; &nbsp;</span>
         <div class="sidebar-header">
@@ -78,28 +51,15 @@
               </div>
             </li>
             <p>Opciones</p>
-            <li><a id="btnDownloadPDF" href="#" class="btn btn-danger" disabled>Exportar a PDF</a></li>
-            <li><a id="btnClearEventLayer" href="#" class="btn btn-danger" disabled>Borrar Paradas del Server</a></li>
-            <li><a id="btnClearRouteLayer" href="#" class="btn btn-danger" disabled>Borrar Rutas del Server</a></li>
+            <li><button id="btnDownloadPDF"     type="button" class="btn btn-danger btn-option" disabled>Exportar a PDF</button></li>
+            <li><button id="btnClearEventLayer" type="button" class="btn btn-danger btn-option" disabled>Limpiar Paradas</button></li>
+            <li><button id="btnClearRouteLayer" type="button" class="btn btn-danger btn-option" disabled>Limpiar Rutas</button></li>
         </ul>
     </nav>
 
-    <span id="btnOpen" class="btn btn-danger sidebarCollapse"><b>></b></span>
+    <span id="btnOpen" class="btn btn-danger sidebarCollapse"><b><i class="fa fa-chevron-right"></i></b></span>
 
-    <!-- Page Content Holder -->
     <div id="content">
-
-          <!-- <nav class="navbar navbar-default">
-            <div class="container-fluid">
-
-                <div class="navbar-header">
-                    <button type="button" id="btnSaveStops" class="btn btn-info navbar-btn">
-                        <i class="glyphicon glyphicon-align-left"></i>
-                        <span>Toggle Sidebar</span>
-                    </button>
-                </div>
-            </div>
-        </nav>   -->
         <div id="viewDiv"></div>
     </div>
 </div>
