@@ -143,7 +143,7 @@ require([
     //     title: "Paradas"
     // })
 
-    
+
     // Se deja definida la capa del móvil
     var mobileLyr = new GraphicsLayer();
     map.layers.add(mobileLyr);
@@ -529,6 +529,7 @@ require([
                 segment_length: 100, // 100m
                 velocity: 100, // 100m ~ 100ms => 360.000 km/h
                 travelled_length: 0, // km
+                last_exec_time: 0,
                 coordinates: null
             }
 
@@ -536,6 +537,7 @@ require([
             // Se utiliza Geometry Engine para que sea más rápido (podría usarse el Geometry Service)
             var path = geometryEngine.densify(current_route.geometry, simulation.segment_length, "meters").paths[0];
             simulation.coordinates = path;
+            simulation.last_exec_time = performance.now();
             
             disableSimButtons();
             showToast("Simulación iniciada", "info");
@@ -618,11 +620,13 @@ require([
                                 });
                                 var population_percentage = Math.round((total_local_population / total_county_population) * 100); 
                                 var travelled_km = Math.round(simulation.travelled_length / 1000);
+                                var actual_velocity = Math.round((simulation.segment_length / 1000) / ((performance.now() - simulation.last_exec_time) / 3600000));
                                 content += `
                                     </ul>
                                     <b>Población total en el buffer: ${total_local_population} (%${population_percentage})</b>
                                     <hr/>
-                                    <b>Distancia recorrida: ${travelled_km}km</b>
+                                    <b>Distancia recorrida: ${travelled_km}km</b><br/>
+                                    <b>Velocidad: ${actual_velocity}km/h</b>
                                 `;
                             }
 
@@ -647,6 +651,7 @@ require([
 
                             simulation.iteration++;
                             simulation.travelled_length += simulation.segment_length;
+                            simulation.last_exec_time = performance.now();
                             setTimeout(updateSimulation, simulation.velocity, simulation);
                         }
                     });
