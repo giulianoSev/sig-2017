@@ -39,6 +39,7 @@ require([
     var token = null;
     var stops = [];
     var simulating = false;
+    var current_route = null;
 
     // Símbolos
     var stopMarker = {
@@ -114,19 +115,6 @@ require([
         map: map
     });
 
-    
-    // Se deja definida la capa de paradas 
-    var stopsLyr = new GraphicsLayer({
-        title: "Paradas",
-        id: "stopsLyr"
-    });
-    map.layers.add(stopsLyr);
-
-    // var legendStopsLyr = new LegendLayer({
-    //     layerId: "stopsLyr",
-    //     subLayerIds: [],
-    //     title: "Paradas"
-    // })
 
     // Se deja definida la capa de rutas
     var routeLyr = new GraphicsLayer({
@@ -134,14 +122,28 @@ require([
         id: "routeLyr"
     });
     map.layers.add(routeLyr);
-    var current_route = null;
-
+    
     // var legendRouteLyr = new LegendLayer({
     //     leyerId: "routeLyr",
     //     subLayerIds: [],
     //     title: "Ruta"
     // })
 
+    // Se deja definida la capa de paradas 
+    var stopsLyr = new GraphicsLayer({
+        title: "Paradas",
+        id: "stopsLyr"
+    });
+    map.layers.add(stopsLyr);
+
+
+    // var legendStopsLyr = new LegendLayer({
+    //     layerId: "stopsLyr",
+    //     subLayerIds: [],
+    //     title: "Paradas"
+    // })
+
+    
     // Se deja definida la capa del móvil
     var mobileLyr = new GraphicsLayer();
     map.layers.add(mobileLyr);
