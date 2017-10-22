@@ -40,6 +40,7 @@ require([
     var stops = [];
     var simulating = false;
     var current_route = null;
+    var mode = "service";
 
     // Símbolos
     var stopMarker = {
@@ -534,14 +535,15 @@ require([
             }
 
             // Se obtiene la ruta como una serie de puntos equidistantes
-            // Se utiliza Geometry Engine para que sea más rápido (podría usarse el Geometry Service)
-            var path = geometryEngine.densify(current_route.geometry, simulation.segment_length, "meters").paths[0];
-            simulation.coordinates = path;
-            simulation.last_exec_time = performance.now();
-            
-            disableSimButtons();
-            showToast("Simulación iniciada", "info");
-            updateSimulation(simulation);
+            // Se utiliza Geometry Engine o Service dependiendo del modo
+            getDensify(simulation).then(path => {
+                simulation.coordinates = path;
+                simulation.last_exec_time = performance.now();
+                
+                disableSimButtons();
+                showToast("Simulación iniciada", "info");
+                updateSimulation(simulation);
+            });
         }else{
             showToast("Primero debe indicarse una ruta.", "error");
             return;
@@ -586,6 +588,8 @@ require([
                         if(simulating){
                             var graphics = [];
                             var content = "";
+                            var counties_promise = Promise.resolve(false);
+
                             if(results[1]){
                                 content += `
                                     <b>Estados intersectados: </b><br/>
@@ -606,53 +610,74 @@ require([
                                     <b>Condados intersectados: </b><br/>
                                     <ul>
                                 `;
-                                var total_local_population = 0;
-                                var total_county_population = 0;
+                                var population_promises = [];
                                 results[0].forEach(county => {
                                     graphics.push(county.graphic);
-                                    var local_population = getLocalPopulation(buffer, county);
-                                    total_local_population += local_population;
-                                    total_county_population += county.total_population;
-                                    var population_percentage = Math.round((local_population / county.total_population) * 100); 
-                                    content += `
-                                        <li>${county.name}, ${county.st_abbrev} - ${local_population}/${county.total_population} (%${population_percentage})</li>
-                                    `;
+                                    population_promises.push(
+                                        getLocalPopulation(buffer, county)
+                                        .then(local_population => {
+                                            var population_percentage = Math.round((local_population / county.total_population) * 100); 
+                                            return {
+                                                local_population: local_population,
+                                                county_population: county.total_population,
+                                                list_item: `<li>${county.name}, ${county.st_abbrev} - ${local_population}/${county.total_population} (%${population_percentage})</li>`
+                                            }
+                                        }
+                                    ));
                                 });
-                                var population_percentage = Math.round((total_local_population / total_county_population) * 100); 
-                                var travelled_km = Math.round(simulation.travelled_length / 1000);
-                                var actual_velocity = Math.round((simulation.segment_length / 1000) / ((performance.now() - simulation.last_exec_time) / 3600000));
-                                content += `
-                                    </ul>
-                                    <b>Población total en el buffer: ${total_local_population} (%${population_percentage})</b>
-                                    <hr/>
-                                    <b>Distancia recorrida: ${travelled_km}km</b><br/>
-                                    <b>Velocidad: ${actual_velocity}km/h</b>
-                                `;
+                                counties_promise = Promise.all(population_promises)
+                                .then(counties_info => {
+                                    var total_local_population = 0;
+                                    var total_county_population = 0;
+                                    counties_list = "";
+                                    counties_info.forEach(county_info => {
+                                        total_local_population += county_info.local_population;
+                                        total_county_population += county_info.county_population;
+                                        counties_list += county_info.list_item;
+                                    });
+
+                                    var population_percentage = Math.round((total_local_population / total_county_population) * 100); 
+                                    var travelled_km = Math.round(simulation.travelled_length / 1000);
+                                    var actual_velocity = Math.round((simulation.segment_length / 1000) / ((performance.now() - simulation.last_exec_time) / 3600000));
+                                    content += counties_list;
+                                    content += `
+                                        </ul>
+                                        <b>Población total en el buffer: ${total_local_population} (%${population_percentage})</b>
+                                        <hr/>
+                                        <b>Distancia recorrida: ${travelled_km}km</b><br/>
+                                        <b>Velocidad: ${actual_velocity}km/h</b>
+                                    `;
+                                    return true;
+                                });
                             }
 
+                            Promise.all([counties_promise])
+                            .then(results => {
+                                if(results[0]){
+                                    graphics.push(new_marker);
+                                    graphics.push(buffer);
 
-                            graphics.push(new_marker);
-                            graphics.push(buffer);
+                                    mobileLyr.removeAll();
+                                    mobileLyr.addMany(graphics);
 
-                            mobileLyr.removeAll();
-                            mobileLyr.addMany(graphics);
+                                    // Actualizo el popup
+                                    view.popup.open({
+                                        title: "Información de la simulación",
+                                        content: content,
+                                        dockEnabled: true,
+                                        dockOptions: {
+                                            breakpoint: false,
+                                            buttonEnabled: false,
+                                            position: "top-right"
+                                        }
+                                    });
 
-                            // Actualizo el popup
-                            view.popup.open({
-                                title: "Información de la simulación",
-                                content: content,
-                                dockEnabled: true,
-                                dockOptions: {
-                                    breakpoint: false,
-                                    buttonEnabled: false,
-                                    position: "top-right"
+                                    simulation.iteration++;
+                                    simulation.travelled_length += simulation.segment_length;
+                                    simulation.last_exec_time = performance.now();
+                                    setTimeout(updateSimulation, simulation.velocity, simulation);
                                 }
                             });
-
-                            simulation.iteration++;
-                            simulation.travelled_length += simulation.segment_length;
-                            simulation.last_exec_time = performance.now();
-                            setTimeout(updateSimulation, simulation.velocity, simulation);
                         }
                     });
                 }
@@ -660,22 +685,63 @@ require([
         }
     }
 
+    // Obtiene la ruta actual como una serie de puntos equidistantes
+    function getDensify(simulation){
+        var path_promise;
+        if(mode == "service"){
+            path_promise = Promise.resolve(
+                geometryEngine.densify(current_route.geometry, simulation.segment_length, "meters").paths[0]
+            );
+        } else if(mode == "engine"){
+            path_promise = Promise.resolve(
+                geometryEngine.densify(current_route.geometry, simulation.segment_length, "meters").paths[0]
+            );
+        }
+
+        return Promise.all([path_promise])
+        .then(paths => {
+            return paths[0];
+        });
+    }
+
     // Obtiene la cantidad de población dentro del buffer
     function getLocalPopulation(buffer, county){
         // Paso el área del condado a metro^2
         var land_area = county.land_area * 2.58999;
 
-        // Obtengo el área de intersección (con geometry engine porque es más rápido) (podría usarse el Geometry Service)
-        var intersect_area = geometryEngine.geodesicArea(
-            geometryEngine.intersect(buffer.geometry, county.graphic.geometry), 
-            "square-kilometers"
-        );
-        
-        // Obtengo el porcentaje de área ocupada
-        var cover_percentage = intersect_area / land_area;
+        // Obtengo el área de intersección
+        var intersect_area_promise;
+        if(mode == "service"){
+            // intersect_area_promise = geometrySvc.intersect([buffer.geometry], county.graphic.geometry)
+            // .then(areas => {
+                
+            // })
+            // .catch(err => {
+            //     console.log("Intersects: ", err);
+            //     showToast("Error calculando la interseccion", "error");
+            // });
+            intersect_area_promise = Promise.resolve(geometryEngine.geodesicArea(
+                geometryEngine.intersect(buffer.geometry, county.graphic.geometry), 
+                "square-kilometers"
+            ));
+        }else if(mode == "engine"){
+            intersect_area_promise = Promise.resolve(geometryEngine.geodesicArea(
+                geometryEngine.intersect(buffer.geometry, county.graphic.geometry), 
+                "square-kilometers"
+            ));
+        }else{
+            showToast("No hay modo seleccionado", "error");
+        }
 
-        // Obtengo la poblacion dentro del buffer
-        return Math.round(county.total_population * cover_percentage);
+        return Promise.all([intersect_area_promise])
+        .then(intersect_areas => {
+            // Obtengo el porcentaje de área ocupada
+            var cover_percentage = intersect_areas[0] / land_area;
+
+            // Obtengo la poblacion dentro del buffer
+            return Math.round(county.total_population * cover_percentage);
+        });
+        
     }   
 
     // Crea el marcador del móvil
@@ -705,7 +771,6 @@ require([
 
     // Borra todas las features de una feature layer
     function clearFeatureLayer(fLyr){
-
         showSpinner();
         fLyr.queryObjectIds()
         .then(objectIds => {
@@ -733,7 +798,7 @@ require([
         .then(() => hideSpinner());
     }
 
-    // Obtiene el buffer mediante una consulta al Geometry Service
+    // Obtiene el buffer 
     function getBuffer(marker, simulation){
         if(simulating){
             var bufferParams = new BufferParameters({
@@ -742,16 +807,28 @@ require([
                 unit: "kilometers",
                 geodesic: true
             });
-            return geometrySvc.buffer(bufferParams)
-            .then(buffer => {
-                return new Graphic({
-                    geometry: buffer[0],
-                    symbol: bufferSymbol
+
+            var buffer_promise;
+            if(mode == "service"){
+                buffer_promise = geometrySvc.buffer(bufferParams)
+                .then(buffer => {
+                    return new Graphic({
+                        geometry: buffer[0],
+                        symbol: bufferSymbol
+                    });
+                })
+                .catch(err => {
+                    console.log("Buffer: ", err)
+                    showToast("Error calculando el buffer", "error");
                 });
-            })
-            .catch(err => {
-                console.log("Buffer: ", err)
-                showToast("Error calculando el buffer", "error");
+            }else if(mode == "engine"){
+                
+            }else{
+                showToast("No hay modo seleccionado", "error");
+            }
+
+            return Promise.all([buffer_promise]).then((buffers) => {
+                return buffers[0];
             });
         }else{
             showToast("No hay simulación en progreso", "error");
