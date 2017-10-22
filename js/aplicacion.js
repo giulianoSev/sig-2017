@@ -25,11 +25,13 @@ require([
     "esri/tasks/support/PrintTemplate",
     "esri/tasks/support/LegendLayer",
     "esri/geometry/geometryEngine",
+    "esri/tasks/support/AreasAndLengthsParameters",
     "dojo/domReady!"
 ], function(
     Map, TileLayer, MapView, Graphic, GraphicsLayer, RouteTask, RouteParameters,
     FeatureSet, urlUtils, on, Search, Locator, FeatureLayer, Print, PrintVM, PrintTemplate, Query, GeometryService,
-    DensifyParameters, QueryTask, BufferParameters, PrintTask, PrintParameters, PrintTemplate, LegendLayer, geometryEngine
+    DensifyParameters, QueryTask, BufferParameters, PrintTask, PrintParameters, PrintTemplate, LegendLayer, geometryEngine,
+    AreasAndLengthsParameters
 ) {
     //////////////////////////////////////////////////////
     // DEFINICIONES Y CONSTANTES
@@ -528,7 +530,7 @@ require([
                 iteration: 0,
                 buffer_size: 30, // 3km
                 segment_length: 100, // 100m
-                velocity: 100, // 100m ~ 100ms => 360.000 km/h
+                velocity: 100, // 100m ~ 100ms => 360.000 km/h (Asumiendo que no hay nada que demore el update)
                 travelled_length: 0, // km
                 last_exec_time: 0,
                 coordinates: null
@@ -556,7 +558,6 @@ require([
             simulating = false;
             
             chgSimBtn();
-            enableSimButtons();
             enableSimButtons();
             showToast("Simulación finalizada!", "info");
         }else{
@@ -625,6 +626,7 @@ require([
                                         }
                                     ));
                                 });
+
                                 counties_promise = Promise.all(population_promises)
                                 .then(counties_info => {
                                     var total_local_population = 0;
@@ -689,9 +691,21 @@ require([
     function getDensify(simulation){
         var path_promise;
         if(mode == "service"){
-            path_promise = Promise.resolve(
-                geometryEngine.densify(current_route.geometry, simulation.segment_length, "meters").paths[0]
-            );
+            var densifyParams = new DensifyParameters({
+                geometries: [current_route.geometry],
+                lengthUnit: "meters",
+                maxSegmentLength: simulation.segment_length,
+                geodesic: true
+            });
+
+            path_promise = geometrySvc.densify(densifyParams)
+            .then(data => {
+                return data[0].paths[0];
+            })
+            .catch(err => {
+                alert("Error al calcular los puntos de ruta");
+                console.log("Densify: ", err);
+            });
         } else if(mode == "engine"){
             path_promise = Promise.resolve(
                 geometryEngine.densify(current_route.geometry, simulation.segment_length, "meters").paths[0]
@@ -712,18 +726,36 @@ require([
         // Obtengo el área de intersección
         var intersect_area_promise;
         if(mode == "service"){
-            // intersect_area_promise = geometrySvc.intersect([buffer.geometry], county.graphic.geometry)
-            // .then(areas => {
-                
-            // })
-            // .catch(err => {
-            //     console.log("Intersects: ", err);
-            //     showToast("Error calculando la interseccion", "error");
-            // });
-            intersect_area_promise = Promise.resolve(geometryEngine.geodesicArea(
-                geometryEngine.intersect(buffer.geometry, county.graphic.geometry), 
-                "square-kilometers"
-            ));
+            intersect_area_promise = geometrySvc.intersect([buffer.geometry], county.graphic.geometry)
+            .then(areas => {
+                var areas_params = new AreasAndLengthsParameters({
+                    areaUnit: "square-kilometers",
+                    calculationType: "geodesic",
+                    lengthUnit: "kilometers",
+                    polygons: areas
+                });
+
+                return geometrySvc.areasAndLengths(areas_params)
+                .then(results => {
+                    return results.areas[0]
+                })
+                .catch(err => {
+                    console.log("Areas: ", err);
+                    showToast("Ocurrió un error calculando la intersección de áreas");
+                });
+            })
+            .catch(err => {
+                console.log("Intersects: ", err);
+                showToast("Error calculando la interseccion", "error");
+            });
+            
+            
+
+
+            // intersect_area_promise = Promise.resolve(geometryEngine.geodesicArea(
+            //     geometryEngine.intersect(buffer.geometry, county.graphic.geometry), 
+            //     "square-kilometers"
+            // ));
         }else if(mode == "engine"){
             intersect_area_promise = Promise.resolve(geometryEngine.geodesicArea(
                 geometryEngine.intersect(buffer.geometry, county.graphic.geometry), 
@@ -812,23 +844,25 @@ require([
             if(mode == "service"){
                 buffer_promise = geometrySvc.buffer(bufferParams)
                 .then(buffer => {
-                    return new Graphic({
-                        geometry: buffer[0],
-                        symbol: bufferSymbol
-                    });
+                    return buffer[0];
                 })
                 .catch(err => {
                     console.log("Buffer: ", err)
                     showToast("Error calculando el buffer", "error");
                 });
             }else if(mode == "engine"){
-                
+                buffer_promise = Promise.resolve(
+                    geometryEngine.buffer(marker.geometry, simulation.buffer_size, "kilometers")
+                );
             }else{
                 showToast("No hay modo seleccionado", "error");
             }
 
             return Promise.all([buffer_promise]).then((buffers) => {
-                return buffers[0];
+                return new Graphic({
+                    geometry: buffers[0],
+                    symbol: bufferSymbol
+                });
             });
         }else{
             showToast("No hay simulación en progreso", "error");
@@ -922,13 +956,23 @@ require([
         // Quito spinner
         hideSpinner();
 
-
         // Habilita botones de la página
         $("#btnLoadStops").prop('disabled', false);
         $("#btnLoadRoute").prop('disabled', false);
         $("#btnDownloadPDF").prop('disabled', false);
         $("#btnClearEventLayer").prop('disabled', false);
         $("#btnClearRouteLayer").prop('disabled', false);
+
+        // Opciones de simulación
+        if(mode == "service"){
+            $("#btnModeEngine").removeClass();
+            $("#btnModeEngine").addClass("btn btn-secondary");
+            $("#btnModeService").addClass("btn btn-success");
+        }else if(mode == "engine"){
+            $("#btnModeService").removeClass();
+            $("#btnModeService").addClass("btn btn-secondary");
+            $("#btnModeEngine").addClass("btn btn-success");
+        }
 
         // Evt click
         $("#btnSaveStops").click(() => {
@@ -967,6 +1011,18 @@ require([
             stop: function(event, ui) {
                 updateStop(ui.item.startPos, ui.item.index());
             }
+        });
+        $("#btnModeEngine").click(() => { 
+            mode = "engine"; 
+            $("#btnModeService").removeClass();
+            $("#btnModeService").addClass("btn btn-secondary");
+            $("#btnModeEngine").addClass("btn btn-success");
+        });
+        $("#btnModeService").click(() => { 
+            mode = "service";
+            $("#btnModeEngine").removeClass();
+            $("#btnModeEngine").addClass("btn btn-secondary");
+            $("#btnModeService").addClass("btn btn-success");
         });
         $('.sidebarCollapse').on('click', function () {
             if($("#sidebar").hasClass("active")){
