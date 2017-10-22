@@ -748,14 +748,6 @@ require([
                 console.log("Intersects: ", err);
                 showToast("Error calculando la interseccion", "error");
             });
-            
-            
-
-
-            // intersect_area_promise = Promise.resolve(geometryEngine.geodesicArea(
-            //     geometryEngine.intersect(buffer.geometry, county.graphic.geometry), 
-            //     "square-kilometers"
-            // ));
         }else if(mode == "engine"){
             intersect_area_promise = Promise.resolve(geometryEngine.geodesicArea(
                 geometryEngine.intersect(buffer.geometry, county.graphic.geometry), 
@@ -833,15 +825,16 @@ require([
     // Obtiene el buffer 
     function getBuffer(marker, simulation){
         if(simulating){
-            var bufferParams = new BufferParameters({
-                geometries: [marker.geometry],
-                distances: [simulation.buffer_size],
-                unit: "kilometers",
-                geodesic: true
-            });
 
             var buffer_promise;
             if(mode == "service"){
+                var bufferParams = new BufferParameters({
+                    geometries: [marker.geometry],
+                    distances: [simulation.buffer_size],
+                    unit: "kilometers",
+                    geodesic: true
+                });
+
                 buffer_promise = geometrySvc.buffer(bufferParams)
                 .then(buffer => {
                     return buffer[0];
@@ -852,7 +845,7 @@ require([
                 });
             }else if(mode == "engine"){
                 buffer_promise = Promise.resolve(
-                    geometryEngine.buffer(marker.geometry, simulation.buffer_size, "kilometers")
+                    geometryEngine.geodesicBuffer(marker.geometry, simulation.buffer_size, "kilometers")
                 );
             }else{
                 showToast("No hay modo seleccionado", "error");
