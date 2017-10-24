@@ -661,9 +661,11 @@ require([
                                     });
 
                                     var population_percentage = Math.round((total_local_population / total_county_population) * 100); 
-                                    var travelled_km = Math.round(simulation.travelled_length / 1000);
-                                    var step_distance = simulation.step * simulation.segment_length > 1000 ? 
-                                        (simulation.step * simulation.segment_length / 1000) + "km" : 
+                                    var travelled_distance = simulation.travelled_length >= 1000 ? 
+                                        (simulation.travelled_length / 1000).toFixed(1) + "km" :
+                                        (simulation.travelled_length) + "m";
+                                    var step_distance = simulation.step * simulation.segment_length >= 1000 ? 
+                                        (simulation.step * simulation.segment_length / 1000).toFixed(1) + "km" : 
                                         (simulation.step * simulation.segment_length) + "m";
                                     // var actual_velocity = Math.round((simulation.segment_length / 1000) / ((performance.now() - simulation.last_exec_time) / 3600000));
                                     content += counties_list;
@@ -671,7 +673,7 @@ require([
                                         </ul>
                                         <b>Población total en el buffer: ${total_local_population} (%${population_percentage})</b>
                                         <hr/>
-                                        <b>Distancia recorrida: ${travelled_km}km</b><br/>
+                                        <b>Distancia recorrida: ${travelled_distance}</b><br/>
                                         <b>Distancia por iteración: ${step_distance}</b>
                                     `;
                                     return true;
@@ -680,32 +682,34 @@ require([
 
                             Promise.all([counties_promise])
                             .then(results => {
-                                if(results[0]){
-                                    graphics.push(new_marker);
-                                    graphics.push(buffer);
+                                if(simulating){
+                                    if(results[0]){
+                                        graphics.push(new_marker);
+                                        graphics.push(buffer);
 
-                                    mobileLyr.removeAll();
-                                    mobileLyr.addMany(graphics);
+                                        mobileLyr.removeAll();
+                                        mobileLyr.addMany(graphics);
 
-                                    // Actualizo el popup
-                                    view.popup.open({
-                                        title: "Información de la simulación",
-                                        content: content,
-                                        dockEnabled: true,
-                                        dockOptions: {
-                                            breakpoint: false,
-                                            buttonEnabled: false,
-                                            position: "top-right"
-                                        }
-                                    });
+                                        // Actualizo el popup
+                                        view.popup.open({
+                                            title: "Información de la simulación",
+                                            content: content,
+                                            dockEnabled: true,
+                                            dockOptions: {
+                                                breakpoint: false,
+                                                buttonEnabled: false,
+                                                position: "top-right"
+                                            }
+                                        });
 
-                                    simulation.step = getSimStep();
-                                    simulation.buffer_size = getBufferSize();
+                                        simulation.step = getSimStep();
+                                        simulation.buffer_size = getBufferSize();
 
-                                    simulation.iteration += simulation.step;
-                                    simulation.travelled_length += simulation.segment_length * simulation.step;
-                                    simulation.last_exec_time = performance.now();
-                                    updateSimulation(simulation);
+                                        simulation.iteration += simulation.step;
+                                        simulation.travelled_length += simulation.segment_length * simulation.step;
+                                        simulation.last_exec_time = performance.now();
+                                        updateSimulation(simulation);
+                                    }
                                 }
                             });
                         }
