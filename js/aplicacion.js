@@ -26,12 +26,13 @@ require([
     "esri/tasks/support/LegendLayer",
     "esri/geometry/geometryEngine",
     "esri/tasks/support/AreasAndLengthsParameters",
+    "esri/geometry/Polyline",
     "dojo/domReady!"
 ], function(
     Map, TileLayer, MapView, Graphic, GraphicsLayer, RouteTask, RouteParameters,
     FeatureSet, urlUtils, on, Search, Locator, FeatureLayer, Print, PrintVM, PrintTemplate, Query, GeometryService,
     DensifyParameters, QueryTask, BufferParameters, PrintTask, PrintParameters, PrintTemplate, LegendLayer, geometryEngine,
-    AreasAndLengthsParameters
+    AreasAndLengthsParameters, Polyline
 ) {
     //////////////////////////////////////////////////////
     // DEFINICIONES Y CONSTANTES
@@ -55,8 +56,9 @@ require([
     };
     var routeSymbol = {
         type: "simple-line",
-        color: [0, 0, 255, 0.5],
-        width: 5
+        color: "black",
+        width: 3,
+        style: "dash"
     };
     var carSymbol = {
         type: "picture-marker",
@@ -210,12 +212,14 @@ require([
             exportOptions: {
                 width: 500,
                 height: 400,
-                dpi: 96},
+                dpi: 96
+            },
             layoutOptions: {
                 titleText: "La solución contundente a su problema de ruteo",
                 authorText: "Grupo 7",
-                copyrightText: "SIG",},
-                // legendLayers: [legendRouteLyr, legendStopsLyr]},
+                copyrightText: "SIG"
+            },
+            // legendLayers: [legendRouteLyr, legendStopsLyr]},
             format: "pdf",
             layout: "a4-landscape",
         }),
@@ -528,9 +532,9 @@ require([
             
             var simulation = {
                 iteration: 0,
-                buffer_size: 30, // 3km
+                buffer_size: 30, // 30km
                 segment_length: 100, // 100m
-                velocity: 100, // 100m ~ 100ms => 360.000 km/h (Asumiendo que no hay nada que demore el update)
+                velocity: 0, // Vel. MÁX.
                 travelled_length: 0, // km
                 last_exec_time: 0,
                 coordinates: null
@@ -573,9 +577,29 @@ require([
                 stopSimulation();
             }
 
+            // Si me paso lo seteo en el ultimo
+            if(simulation.iteration + simulation.step >= simulation.coordinates.length){
+               simulation.iteration = simulation.coordinates.length-1; 
+            }
+
             // Busca la coordenada, crea el marcador.
             var next_coordinate = simulation.coordinates[simulation.iteration];
             var new_marker = createSimulationMarker(next_coordinate[0], next_coordinate[1]);
+
+            // Crea la línea de velocidad
+            if(simulation.iteration > 1){
+                routeLyr.graphics.add(new Graphic({
+                    geometry: new Polyline({
+                        paths: [simulation.coordinates[simulation.iteration-2], simulation.coordinates[simulation.iteration-1]],
+                        spatialReference: { wkid: 102100 }
+                    }),
+                    symbol: {
+                        type: "simple-line",
+                        color: [255, 0, 0],
+                        width: "5",
+                    }
+                }));
+            }
 
             // Calculo el buffer y lo agrego a la capa con el móvil.
             getBuffer(new_marker, simulation).then(buffer => {
@@ -1190,5 +1214,39 @@ require([
     function isAlphanumeric(str){
         return /^[a-z0-9]+$/i.test(str);
     }
+
+    function hsv2rgb(h, s, v) {
+        var rgb, i, data = [];
+        if (s === 0) {
+            rgb = [v,v,v];
+        } else {
+            h = h / 60;
+            i = Math.floor(h);
+            data = [v*(1-s), v*(1-s*(h-i)), v*(1-s*(1-(h-i)))];
+            switch(i) {
+            case 0:
+                rgb = [v, data[2], data[0]];
+                break;
+            case 1:
+                rgb = [data[1], v, data[0]];
+                break;
+            case 2:
+                rgb = [data[0], v, data[2]];
+                break;
+            case 3:
+                rgb = [data[0], data[1], v];
+                break;
+            case 4:
+                rgb = [data[2], data[0], v];
+                break;
+            default:
+                rgb = [v, data[0], data[1]];
+                break;
+            }
+        }
+        return '#' + rgb.map(function(x){
+            return ("0" + Math.round(x*255).toString(16)).slice(-2);
+        }).join('');
+    };
 
 });
