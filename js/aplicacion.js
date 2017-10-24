@@ -75,13 +75,13 @@ require([
         }
     };
     var countySymbol = {
-        type: "simple-line",
-        color: [247, 153, 71, 0.5],
+        type: "simple-fill",
+        color: [247, 153, 71, 0.3],
         width: 3
     };
     var stateSymbol = {
-        type: "simple-line",
-        color: [131, 94, 242, 0.5],
+        type: "simple-fill",
+        color: [131, 94, 242, 0.3],
         width: 3
     };
     
@@ -120,6 +120,19 @@ require([
         map: map
     });
 
+    // Se define la capa de condados
+    var countiesLyr = new GraphicsLayer({
+        title: "Condados",
+        id: "countiesLyr"
+    });
+    map.layers.add(countiesLyr);
+
+    // Se define la capa de estados
+    var statesLyr = new GraphicsLayer({
+        title: "Estados",
+        id: "statesLyr"
+    });
+    map.layers.add(statesLyr);
 
     // Se deja definida la capa de rutas
     var routeLyr = new GraphicsLayer({
@@ -134,12 +147,6 @@ require([
         id: "velocityLyr"
     });
     map.layers.add(velocityLyr);
-    
-    // var legendRouteLyr = new LegendLayer({
-    //     leyerId: "routeLyr",
-    //     subLayerIds: [],
-    //     title: "Ruta"
-    // })
 
     // Se deja definida la capa de paradas 
     var stopsLyr = new GraphicsLayer({
@@ -147,14 +154,6 @@ require([
         id: "stopsLyr"
     });
     map.layers.add(stopsLyr);
-
-
-    // var legendStopsLyr = new LegendLayer({
-    //     layerId: "stopsLyr",
-    //     subLayerIds: [],
-    //     title: "Paradas"
-    // })
-
 
     // Se deja definida la capa del móvil
     var mobileLyr = new GraphicsLayer();
@@ -226,7 +225,6 @@ require([
                 authorText: "Grupo 7",
                 copyrightText: "SIG"
             },
-            // legendLayers: [legendRouteLyr, legendStopsLyr]},
             format: "pdf",
             layout: "a4-landscape",
         }),
@@ -602,7 +600,8 @@ require([
                     Promise.all([counties, states])
                     .then(results => {
                         if(simulating){
-                            var graphics = [];
+                            var stateGraphics = [];
+                            var countiesGraphics = [];
                             var content = "";
                             var counties_promise = Promise.resolve(false);
 
@@ -612,7 +611,7 @@ require([
                                     <ul>
                                 `;
                                 results[1].forEach(state => {
-                                    graphics.push(state.graphic);
+                                    stateGraphics.push(state.graphic);
                                     content += `
                                         <li>${state.name}, ${state.st_abbrev}</li>
                                     `;
@@ -628,7 +627,7 @@ require([
                                 `;
                                 var population_promises = [];
                                 results[0].forEach(county => {
-                                    graphics.push(county.graphic);
+                                    countiesGraphics.push(county.graphic);
                                     population_promises.push(
                                         getLocalPopulation(buffer, county)
                                         .then(local_population => {
@@ -677,11 +676,17 @@ require([
                             .then(results => {
                                 if(simulating){
                                     if(results[0]){
-                                        graphics.push(new_marker);
-                                        graphics.push(buffer);
+                                        // graphics.push(new_marker);
+                                        // graphics.push(buffer);
 
                                         mobileLyr.removeAll();
-                                        mobileLyr.addMany(graphics);
+                                        mobileLyr.addMany([new_marker, buffer]);
+
+                                        countiesLyr.removeAll();
+                                        countiesLyr.addMany(countiesGraphics);
+
+                                        statesLyr.removeAll();
+                                        statesLyr.addMany(stateGraphics);
 
                                         // Actualizo el popup
                                         view.popup.open({
