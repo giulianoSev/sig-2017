@@ -127,6 +127,13 @@ require([
         id: "routeLyr"
     });
     map.layers.add(routeLyr);
+
+    // Se deja definida la capa de velocidad
+    var velocityLyr = new GraphicsLayer({
+        title: "Velocidad",
+        id: "velocityLyr"
+    });
+    map.layers.add(velocityLyr);
     
     // var legendRouteLyr = new LegendLayer({
     //     leyerId: "routeLyr",
@@ -525,6 +532,7 @@ require([
                 return;
             }
             simulating = true;
+            velocityLyr.removeAll();
             chgSimBtn();
             
             var simulation = {
@@ -583,21 +591,6 @@ require([
             // Busca la coordenada, crea el marcador.
             var next_coordinate = simulation.coordinates[simulation.iteration];
             var new_marker = createSimulationMarker(next_coordinate[0], next_coordinate[1]);
-
-            // Crea la línea de velocidad
-            if(simulation.iteration > 1){
-                routeLyr.graphics.add(new Graphic({
-                    geometry: new Polyline({
-                        paths: [simulation.coordinates[simulation.iteration-2], simulation.coordinates[simulation.iteration-1]],
-                        spatialReference: { wkid: 102100 }
-                    }),
-                    symbol: {
-                        type: "simple-line",
-                        color: [255, 0, 0],
-                        width: "5",
-                    }
-                }));
-            }
 
             // Calculo el buffer y lo agrego a la capa con el móvil.
             getBuffer(new_marker, simulation).then(buffer => {
@@ -702,6 +695,7 @@ require([
                                             }
                                         });
 
+                                        updateVelocityLine(simulation);
                                         simulation.step = getSimStep();
                                         simulation.buffer_size = getBufferSize();
 
@@ -892,6 +886,38 @@ require([
         }else{
             showToast("No hay simulación en progreso", "error");
         }
+    }
+
+    // Calcula y crea la línea de velocidad
+    function updateVelocityLine(simulation){
+        var velocity_path = [];
+        var start = simulation.iteration - simulation.step >= 0 ? simulation.iteration - simulation.step : 0;
+        for(var i = start; i <= simulation.iteration; i++){
+            velocity_path.push(simulation.coordinates[i]);
+        }
+
+        var color;
+        if(simulation.step < 20){
+            color = "green";
+        }else if(simulation.step >= 20 && simulation.step < 50){
+            color = "yellow";
+        }else if(simulation.step >= 50 && simulation.step < 100){
+            color = "orange";
+        }else{
+            color = "red";
+        }
+
+        velocityLyr.graphics.add(new Graphic({
+            geometry: new Polyline({
+                paths: velocity_path,
+                spatialReference: { wkid: 102100 }
+            }),
+            symbol: {
+                type: "simple-line",
+                color: color,
+                width: "5",
+            }
+        }));
     }
 
     // Se consulta por los condados en cierto buffer
