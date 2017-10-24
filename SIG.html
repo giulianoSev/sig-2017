@@ -50,11 +50,18 @@
                   <button id="btnSimStatus" type="button" style="width: 34%; cursor: pointer;" class="btn btn-success" title="Comenzar simulación" disabled><i class="fa fa-play"></i></button>
               </div>
             </li>
-            <li class="text-center" style="margin-bottom: 5px;">
+            <li class="text-center" style="margin-bottom: 10px;">
                 <div class="btn-group" style="width: 100%;">
                     <button id="btnModeService" type="button" style="width: 50%; cursor: pointer;" class="btn btn-secondary" title="Modo Service"><i class="fa fa-cloud"></i></button>
                     <button id="btnModeEngine"  type="button" style="width: 50%; cursor: pointer;" class="btn btn-secondary" title="Modo Engine"><i class="fa fa-microchip"></i></button>
                 </div>
+            </li>
+            <li class="text-center" style="margin-bottom: 5px;">
+                Buffer (Km):
+                <input id="nmbBufferSize" type="number" class="form-control" step=1 min=1 value="3"/>
+                <br>
+                Velocidad (Pasos):
+                <input id="nmbStepSize"   type="number" class="form-control" step=1 min=1 value="1"/>
             </li>
             <p>Opciones</p>
             <li><button id="btnDownloadPDF"     type="button" class="btn btn-danger btn-option" disabled>Exportar a PDF</button></li>

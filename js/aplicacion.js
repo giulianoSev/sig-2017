@@ -262,9 +262,6 @@ require([
         // Establece el id
         stop.id = stops.length + 1;
 
-        // Agrega al mapa
-        // view.graphics.addMany([stop.graphic]);
-
         // Agrega a la capa de paradas
         stopsLyr.add(stop.graphic);
 
@@ -532,9 +529,9 @@ require([
             
             var simulation = {
                 iteration: 0,
-                buffer_size: 30, // 30km
+                buffer_size: getBufferSize(),
                 segment_length: 100, // 100m
-                velocity: 0, // Vel. MÁX.
+                step: getSimStep(),
                 travelled_length: 0, // km
                 last_exec_time: 0,
                 coordinates: null
@@ -575,6 +572,7 @@ require([
             // Si ya no tengo mas coordenadas termino
             if(simulation.iteration >= simulation.coordinates.length){
                 stopSimulation();
+                return;
             }
 
             // Si me paso lo seteo en el ultimo
@@ -664,14 +662,17 @@ require([
 
                                     var population_percentage = Math.round((total_local_population / total_county_population) * 100); 
                                     var travelled_km = Math.round(simulation.travelled_length / 1000);
-                                    var actual_velocity = Math.round((simulation.segment_length / 1000) / ((performance.now() - simulation.last_exec_time) / 3600000));
+                                    var step_distance = simulation.step * simulation.segment_length > 1000 ? 
+                                        (simulation.step * simulation.segment_length / 1000) + "km" : 
+                                        (simulation.step * simulation.segment_length) + "m";
+                                    // var actual_velocity = Math.round((simulation.segment_length / 1000) / ((performance.now() - simulation.last_exec_time) / 3600000));
                                     content += counties_list;
                                     content += `
                                         </ul>
                                         <b>Población total en el buffer: ${total_local_population} (%${population_percentage})</b>
                                         <hr/>
                                         <b>Distancia recorrida: ${travelled_km}km</b><br/>
-                                        <b>Velocidad: ${actual_velocity}km/h</b>
+                                        <b>Distancia por iteración: ${step_distance}</b>
                                     `;
                                     return true;
                                 });
@@ -698,10 +699,13 @@ require([
                                         }
                                     });
 
-                                    simulation.iteration++;
-                                    simulation.travelled_length += simulation.segment_length;
+                                    simulation.step = getSimStep();
+                                    simulation.buffer_size = getBufferSize();
+
+                                    simulation.iteration += simulation.step;
+                                    simulation.travelled_length += simulation.segment_length * simulation.step;
                                     simulation.last_exec_time = performance.now();
-                                    setTimeout(updateSimulation, simulation.velocity, simulation);
+                                    updateSimulation(simulation);
                                 }
                             });
                         }
@@ -1199,6 +1203,26 @@ require([
     // Oculta el toast
     function hideToast(){
         $("#toast").fadeOut(500);
+    }
+
+    // Retorna el valor del buffer ingresado
+    function getBufferSize(){
+        var val = $("#nmbBufferSize").val();
+        if(val && parseInt(val) >= 1){
+            return parseInt(val);
+        }else{
+            return 1;
+        }
+    }
+
+    // Retorna la cantidad de pasos
+    function getSimStep(){
+        var step = $("#nmbStepSize").val();
+        if(step && parseInt(step) >= 1){
+            return parseInt(step);
+        }else{
+            return 1;
+        }
     }
 
     //////////////////////////////////////////////////////
