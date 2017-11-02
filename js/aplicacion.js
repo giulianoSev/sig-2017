@@ -371,6 +371,10 @@ require([
             var routeResult = data.routeResults[0].route;
             routeResult.symbol = routeSymbol;
             routeLyr.removeAll();
+            mobileLyr.removeAll();
+            countiesLyr.removeAll();
+            statesLyr.removeAll();
+            velocityLyr.removeAll();
             routeLyr.add(routeResult);
 
             current_route = routeResult;
@@ -509,11 +513,16 @@ require([
                 symbol: routeSymbol
             };
             routeLyr.removeAll();
+            mobileLyr.removeAll();
+            countiesLyr.removeAll();
+            statesLyr.removeAll();
             routeLyr.add(routeResult);
+            velocityLyr.removeAll();
 
             current_route = routeResult;
             enableRouteButtons();
             showToast("Ruta cargada con éxito", "info");
+
         })
         .catch (err => {
             console.log("Load Route: ", err);
@@ -685,8 +694,8 @@ require([
                                         countiesLyr.removeAll();
                                         countiesLyr.addMany(countiesGraphics);
 
-                                        statesLyr.removeAll();
-                                        statesLyr.addMany(stateGraphics);
+                                        // statesLyr.removeAll();
+                                        // statesLyr.addMany(stateGraphics);
 
                                         // Actualizo el popup
                                         view.popup.open({
@@ -1175,10 +1184,12 @@ require([
             $("#btnSimStatus").removeClass();
             $("#btnSimStatus").addClass("btn btn-danger");
             $("#btnSimStatus").html(`<i class="fa fa-stop"></i>`)
+            $("#btnSimStatus").attr("title", "Finalizar simulación")
         }else{
             $("#btnSimStatus").removeClass();
             $("#btnSimStatus").addClass("btn btn-success");
             $("#btnSimStatus").html(`<i class="fa fa-play"></i>`)
+            $("#btnSimStatus").attr("title", "Comenzar simulación")
         }
     }
 
