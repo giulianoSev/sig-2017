@@ -52,13 +52,15 @@ require([
         outline: {
           color: [255, 255, 255],
           width: 2
-        }
+        },
+        label: "Paradas"
     };
     var routeSymbol = {
         type: "simple-line",
         color: "black",
         width: 3,
-        style: "dash"
+        style: "dash",
+        label: "Ruta"
     };
     var carSymbol = {
         type: "picture-marker",
@@ -164,6 +166,7 @@ require([
         url: "http://sampleserver5.arcgisonline.com/arcgis/rest/services/LocalGovernment/Events/FeatureServer/0",
         outFields: ["*"],
         visible: false,
+        geometryType: "point",
         spatialReference: { wkid: 102100 }
     });
     map.layers.add(stopsFLyr);
@@ -173,6 +176,7 @@ require([
         url: "http://sampleserver5.arcgisonline.com/arcgis/rest/services/LocalGovernment/Recreation/FeatureServer/1",
         outFields: ["*"],
         visible: false,
+        geometryType: "polyline",
         spatialReference: { wkid: 102100 },
     });
     map.layers.add(routesFLyr);
@@ -221,9 +225,10 @@ require([
                 dpi: 96
             },
             layoutOptions: {
-                titleText: "La solución contundente a su problema de ruteo",
+                titleText: "SIG - Grupo 7 - Laboratorio 2",
                 authorText: "Grupo 7",
-                copyrightText: "SIG"
+                copyrightText: "SIG",
+                legendLayers: [] 
             },
             format: "pdf",
             layout: "a4-landscape",
@@ -368,6 +373,7 @@ require([
         }))
         .solve(routeParams)
         .then((data) => {
+            console.log(data.routeResults[0].route);
             var routeResult = data.routeResults[0].route;
             routeResult.symbol = routeSymbol;
             routeLyr.removeAll();
@@ -417,7 +423,6 @@ require([
         showSpinner();
         stopsFLyr.queryFeatures(query)
         .then((featureSet) => {
-            console.log(featureSet);
             if(featureSet.features.length < 1){
                 showToast("No hay paradas guardadas", "error");
                 return;
